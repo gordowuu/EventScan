@@ -3,6 +3,7 @@
     "source": "functions"
   },
   "hosting": {
+    "target": "eventsnap",
     "public": "public",
     "ignore": [
       "firebase.json",

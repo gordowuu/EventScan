@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "eventsnap-backend"
-  }
+  },
+  "targets": {
+    "eventsnap-backend": {
+      "hosting": {
+        "eventsnap": [
+          "event-snap"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

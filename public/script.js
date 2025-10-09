@@ -51,7 +51,6 @@ const endTimeInput = document.getElementById('end-time');
 const locationInput = document.getElementById('location');
 const descriptionInput = document.getElementById('description');
 const backBtn = document.getElementById('back-btn');
-const createIcsBtn = document.getElementById('create-ics-btn');
 const createGcalBtn = document.getElementById('create-gcal-btn');
 
 let currentImageBlob = null;
@@ -76,12 +75,17 @@ async function initializeGapiClient() {
 }
 
 function initializeGisClient() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: SCOPES,
-        callback: '', // Callback is handled by the promise
-    });
-    gisInited = true;
+    try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: SCOPES,
+            callback: '', // Callback is handled by the promise
+        });
+        gisInited = true;
+    } catch (error) {
+        console.error("Error initializing Google Sign-In:", error);
+        alert("Could not initialize Google Sign-In. Please check the Client ID and browser console for errors.");
+    }
 }
 
 // --- Event Listeners ---
@@ -138,7 +142,6 @@ backBtn.addEventListener('click', () => {
     retakeBtn.click();
 });
 
-createIcsBtn.addEventListener('click', generateICS);
 createGcalBtn.addEventListener('click', addToGoogleCalendar);
 
 // --- Core Functions ---
@@ -186,25 +189,35 @@ function getEventDetailsFromForm() {
  */
 async function addToGoogleCalendar() {
     if (!gapiInited || !gisInited) {
-        alert("Google API is not ready yet. Please wait a moment and try again.");
+        alert("Google API is not ready yet. Please check your browser console for errors and verify your Client ID configuration.");
         return;
     }
 
     // 1. Get user's permission via OAuth
-    const tokenResponse = await new Promise((resolve, reject) => {
-        try {
+    try {
+        await new Promise((resolve, reject) => {
             tokenClient.callback = (resp) => {
-                if (resp.error !== undefined) reject(resp);
+                if (resp.error !== undefined) {
+                    reject(resp);
+                }
                 resolve(resp);
             };
             tokenClient.requestAccessToken({ prompt: 'consent' });
-        } catch (err) {
-            reject(err);
-        }
-    });
+        });
+    } catch (err) {
+        console.error("Error getting user consent:", err);
+        alert("Could not get permission to access your calendar. Please try again.");
+        return;
+    }
+
 
     // 2. Prepare event data for the API
     const eventDetails = getEventDetailsFromForm();
+    if (!eventDetails.startTime || !eventDetails.endTime) {
+        alert("Please ensure both a start and end time are set before creating a calendar event.");
+        return;
+    }
+
     const event = {
         'summary': eventDetails.title,
         'location': eventDetails.location,
@@ -235,38 +248,10 @@ async function addToGoogleCalendar() {
     }
 }
 
-
-/**
- * Generates and triggers a download for an .ics file.
- */
-function generateICS() {
-    const event = getEventDetailsFromForm();
-    const formatTime = (dateTime) => dateTime ? new Date(dateTime).toISOString().replace(/-|:|\.\d+/g, '') : '';
-    const icsContent = [
-        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//EventSnap//EN', 'BEGIN:VEVENT',
-        `UID:${Date.now()}@eventsnap.app`, `DTSTAMP:${formatTime(new Date().toISOString())}`,
-        `DTSTART:${formatTime(event.startTime)}`, `DTEND:${formatTime(event.endTime)}`,
-        `SUMMARY:${event.title}`, `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`,
-        `LOCATION:${event.location}`, 'END:VEVENT', 'END:VCALENDAR'
-    ].join('\r\n');
-
-    const blob = new Blob([icsContent], { type: 'text/calendar' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${event.title.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
 // --- PWA Service Worker ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then(reg => console.log('SW registered.'), err => console.error('SW registration failed:', err));
     });
 }
-
-
 
