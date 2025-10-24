@@ -10,102 +10,464 @@
    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Apple-specific tags for home screen icon and full-screen mode -->
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <!-- PWA tags for home screen icon and full-screen mode -->
+    <link rel="apple-touch-icon" href="/icons/icon-144x144.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     
-    <meta name="theme-color" content="#4A90E2"/>
+    <meta name="theme-color" content="#6366f1"/>
     <style>
-        body { font-family: 'Inter', sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
-        .drop-zone { border-style: dashed; }
-        main { flex-grow: 1; }
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background gradient */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: backgroundMove 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes backgroundMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Glassmorphism card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Modern button styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
+        }
+        
+        /* Upload zone hover effect */
+        .upload-zone {
+            transition: all 0.3s ease;
+            border: 3px dashed rgba(102, 126, 234, 0.3);
+        }
+        
+        .upload-zone:hover {
+            border-color: rgba(102, 126, 234, 0.6);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            transform: scale(1.02);
+        }
+        
+        /* Smooth animations */
+        @keyframes slide-in {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(102, 126, 234, 0.6);
+            }
+        }
+        
+        .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+        }
+        
+        .animate-fade-in {
+            animation: fade-in 0.5s ease-out;
+        }
+        
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        /* Loading spinner enhancement */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Image preview improvements */
+        #image-preview, #poster-image {
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Responsive container sizing */
+        #main-container {
+            max-width: 28rem; /* 448px - default for upload */
+        }
+        
+        #main-container.verification-mode {
+            max-width: 90rem; /* 1440px - large for verification on desktop */
+        }
+        
+        @media (max-width: 1536px) {
+            #main-container.verification-mode {
+                max-width: 80rem; /* 1280px */
+            }
+        }
+        
+        @media (max-width: 1280px) {
+            #main-container.verification-mode {
+                max-width: 72rem; /* 1152px */
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            #main-container.verification-mode {
+                max-width: 60rem; /* 960px */
+            }
+        }
+        
+        @media (max-width: 768px) {
+            #main-container.verification-mode {
+                max-width: 28rem; /* Back to small on mobile */
+            }
+        }
+        
+        /* Input focus states */
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* Better touch targets */
+        button, input[type="file"] + label {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.5);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.7);
+        }
+        
+        /* Dark mode styles */
+        body.dark-mode {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+        
+        body.dark-mode .glass-card {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+        }
+        
+        body.dark-mode .gradient-text {
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        body.dark-mode input,
+        body.dark-mode textarea {
+            background: rgba(15, 23, 42, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+        }
+        
+        body.dark-mode input:focus,
+        body.dark-mode textarea:focus {
+            border-color: #818cf8;
+            background: rgba(15, 23, 42, 0.7);
+        }
+        
+        body.dark-mode label {
+            color: #cbd5e1;
+        }
+        
+        body.dark-mode .upload-zone {
+            border-color: rgba(129, 140, 248, 0.3);
+        }
+        
+        body.dark-mode .upload-zone:hover {
+            border-color: rgba(129, 140, 248, 0.6);
+            background: linear-gradient(135deg, rgba(129, 140, 248, 0.05) 0%, rgba(192, 132, 252, 0.05) 100%);
+        }
+        
+        /* Dark mode toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        body.dark-mode .theme-toggle {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(129, 140, 248, 0.3);
+        }
     </style>
     <!-- Google API Client Library -->
     <script src="https://apis.google.com/js/api.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-800 flex items-center justify-center">
+<body class="text-gray-800 flex items-center justify-center">
+    <!-- Dark Mode Toggle -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+        <svg id="sun-icon" class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+        </svg>
+        <svg id="moon-icon" class="w-6 h-6 text-indigo-300 hidden" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+        </svg>
+    </button>
 
-    <div class="w-full max-w-md mx-auto p-4 md:p-6 flex flex-col h-full">
-        <header class="text-center mb-6">
-            <h1 class="text-4xl font-bold text-gray-900">EventSnap</h1>
-            <p class="text-gray-600 mt-2">Create a calendar event from any poster.</p>
+    <div class="content-wrapper w-full mx-auto p-4 md:p-6 flex flex-col h-full" id="main-container">
+        <header class="text-center mb-8 animate-fade-in">
+            <div class="mb-4">
+                <span class="text-6xl">📸</span>
+            </div>
+            <h1 class="text-5xl font-extrabold text-white mb-3 drop-shadow-lg">EventSnap</h1>
+            <p class="text-white/90 text-lg font-medium">Transform posters into calendar events instantly</p>
+            <div class="mt-4 flex items-center justify-center gap-2 text-white/80 text-sm">
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                    AI Powered
+                </span>
+                <span>•</span>
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+                    Secure
+                </span>
+                <span>•</span>
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
+                    Fast
+                </span>
+            </div>
         </header>
 
-        <main id="app-container" class="bg-white p-6 rounded-2xl shadow-lg">
+        <main id="app-container" class="glass-card p-8 rounded-3xl shadow-2xl animate-fade-in">
 
             <!-- UPLOAD FORM -->
             <div id="upload-form">
-                <label for="image-input" class="cursor-pointer">
-                    <div id="file-prompt" class="mt-1 flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-10 text-center hover:border-blue-500 transition">
+                <label for="image-input" class="cursor-pointer block">
+                    <div id="file-prompt" class="upload-zone flex justify-center rounded-2xl px-6 py-16 md:py-12 text-center">
                         <div class="text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                            </svg>
-                            <div class="mt-4 flex text-sm leading-6 text-gray-600">
-                                <p class="pl-1">Click to upload, or drag and drop</p>
+                            <div class="mb-4">
+                                <svg class="mx-auto h-20 w-20 md:h-16 md:w-16 text-indigo-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
                             </div>
-                            <p class="text-xs leading-5 text-gray-600">PNG, JPG up to 10MB</p>
+                            <div class="text-base md:text-sm leading-6">
+                                <p class="text-xl font-bold gradient-text mb-2">Upload Event Poster</p>
+                                <p class="text-gray-600 font-medium">Click to browse or drag and drop</p>
+                            </div>
+                            <p class="text-sm leading-5 text-gray-500 mt-4 font-medium">PNG or JPG • Max 4MB</p>
+                            <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-full text-indigo-700 text-xs font-semibold">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                Best with clear, well-lit photos
+                            </div>
                         </div>
                     </div>
                 </label>
                 <input id="image-input" name="image-input" type="file" class="sr-only" accept="image/png, image/jpeg">
                 
-                <div id="preview-container" class="hidden mt-4 text-center">
-                    <img id="image-preview" src="#" alt="Image Preview" class="max-h-60 w-auto mx-auto rounded-lg shadow-md"/>
-                    <div class="mt-4 flex justify-center space-x-4">
-                        <button id="retake-btn" type="button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">Choose Different Photo</button>
-                        <button id="process-btn" type="button" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">Process Poster</button>
+                <div id="preview-container" class="hidden mt-6 text-center">
+                    <img id="image-preview" src="#" alt="Image Preview" class="max-h-80 w-auto mx-auto rounded-2xl border-4 border-white"/>
+                    <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                        <button id="retake-btn" type="button" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold shadow-sm">
+                            <span class="flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                Choose Different
+                            </span>
+                        </button>
+                        <button id="process-btn" type="button" class="btn-primary px-10 py-3 text-white font-bold rounded-xl shadow-lg">
+                            <span class="flex items-center justify-center gap-2 relative z-10">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                Process with AI
+                            </span>
+                        </button>
                     </div>
                 </div>
             </div>
             
             <!-- PROCESSING SCREEN -->
-            <div id="processing-screen" class="hidden text-center py-12">
-                <div role="status">
-                    <svg aria-hidden="true" class="inline w-10 h-10 text-gray-200 animate-spin fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
-                        <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0492C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5424 39.6781 93.9676 39.0409Z" fill="currentFill"/>
-                    </svg>
-                    <span class="sr-only">Loading...</span>
+            <div id="processing-screen" class="hidden text-center py-20">
+                <div role="status" class="mb-8 relative">
+                    <div class="pulse-glow inline-block rounded-full p-6 bg-gradient-to-br from-indigo-500 to-purple-600">
+                        <svg aria-hidden="true" class="w-16 h-16 text-white animate-spin" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor" fill-opacity="0.3"/>
+                            <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0492C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5424 39.6781 93.9676 39.0409Z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <span class="sr-only">Processing...</span>
                 </div>
-                <p id="processing-message" class="mt-4 text-gray-600">Processing...</p>
+                <p id="processing-message" class="text-xl font-bold gradient-text mb-2">Analyzing your poster...</p>
+                <p class="text-sm text-gray-600 font-medium">Our AI is extracting event details</p>
+                <div class="mt-6 flex items-center justify-center gap-2 text-xs text-gray-500">
+                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
+                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+                    <div class="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
+                </div>
             </div>
 
             <!-- VERIFICATION SCREEN -->
             <div id="verification-screen" class="hidden">
-                <div class="text-center mb-4">
-                    <h2 class="text-lg font-medium text-gray-900">Verify Event Details</h2>
-                    <p class="text-sm text-gray-500">Please check the information below and make any necessary changes before creating the event.</p>
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full mb-4">
+                        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <span class="text-sm font-semibold text-green-700">Event Details Extracted</span>
+                    </div>
+                    <h2 class="text-3xl md:text-4xl font-bold gradient-text mb-2">Review & Confirm</h2>
+                    <p class="text-base text-gray-600">Verify the details below before adding to your calendar</p>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                    <img id="poster-image" src="#" alt="Poster Preview" class="w-full rounded-lg shadow-md">
-                    <form id="event-form" class="space-y-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+                    <div class="order-2 lg:order-1">
+                        <img id="poster-image" src="#" alt="Poster Preview" class="w-full rounded-2xl border-4 border-white shadow-xl cursor-pointer hover:scale-105 transition-transform">
+                    </div>
+                    <form id="event-form" class="space-y-5 order-1 lg:order-2">
                         <div>
-                            <label for="title" class="block text-sm font-medium text-gray-700">Event Title</label>
-                            <input type="text" id="title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <label for="title" class="block text-base font-bold text-gray-700 mb-2">Event Title</label>
+                            <input type="text" id="title" class="block w-full px-5 py-4 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-all">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label for="start-time" class="block text-base font-bold text-gray-700 mb-2">Start Time</label>
+                                <input type="datetime-local" id="start-time" class="block w-full px-5 py-4 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-all">
+                            </div>
+                            <div>
+                                <label for="end-time" class="block text-base font-bold text-gray-700 mb-2">End Time</label>
+                                <input type="datetime-local" id="end-time" class="block w-full px-5 py-4 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-all">
+                            </div>
                         </div>
                         <div>
-                            <label for="start-time" class="block text-sm font-medium text-gray-700">Start Time</label>
-                            <input type="datetime-local" id="start-time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <label for="location" class="block text-base font-bold text-gray-700 mb-2">Location</label>
+                            <input type="text" id="location" placeholder="Add event location" class="block w-full px-5 py-4 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-all">
                         </div>
                         <div>
-                            <label for="end-time" class="block text-sm font-medium text-gray-700">End Time</label>
-                            <input type="datetime-local" id="end-time" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <label for="description" class="block text-base font-bold text-gray-700 mb-2">Description</label>
+                            <textarea id="description" rows="4" placeholder="Additional details..." class="block w-full px-5 py-4 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-all resize-none"></textarea>
                         </div>
-                        <div>
-                            <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
-                            <input type="text" id="location" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-                            <textarea id="description" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
-                        </div>
-                        <div class="flex flex-col md:flex-row md:justify-between items-center pt-4 space-y-4 md:space-y-0">
-                             <button type="button" id="back-btn" class="w-full md:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">Back</button>
-                             <button type="button" id="create-gcal-btn" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
-                                 <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/><path fill="none" d="M0 0h24v24H0z"/></svg>
-                                 Add to Google Calendar
+                        <div class="flex flex-col sm:flex-row sm:justify-between items-center pt-6 gap-4">
+                             <button type="button" id="back-btn" class="w-full sm:w-auto px-8 py-4 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-bold shadow-sm text-base">
+                                 <span class="flex items-center justify-center gap-2">
+                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                                     Back
+                                 </span>
+                             </button>
+                             <button type="button" id="create-gcal-btn" class="btn-primary w-full sm:w-auto px-10 py-4 text-white font-bold rounded-xl shadow-lg text-base">
+                                 <span class="flex items-center justify-center gap-2 relative z-10">
+                                     <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/></svg>
+                                     Add to Calendar
+                                 </span>
                              </button>
                         </div>
                     </form>
@@ -113,12 +475,24 @@
             </div>
         </main>
         
-        <footer class="text-center mt-6 text-sm text-gray-500">
-            <a href="/privacy.html" target="_blank" rel="noopener noreferrer" class="hover:underline">Privacy Policy</a>
+        <footer class="text-center mt-8 text-sm text-white/70 pb-4">
+            <p class="mb-2 font-medium">Powered by Google Gemini AI</p>
+            <div class="flex items-center justify-center gap-4 text-xs">
+                <a href="/privacy.html" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">Privacy Policy</a>
+                <span>•</span>
+                <a href="https://github.com/gordowuu/EventScan" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                    GitHub
+                </a>
+            </div>
         </footer>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Google API Scripts -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- Tesseract.js removed - now using Gemini Vision API directly -->
     <script type="module" src="/script.js"></script>
 </body>
 </html>
