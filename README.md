@@ -29,7 +29,12 @@ Transform event posters into calendar events instantly using AI vision technolog
 - 🎨 **Beautiful UI** - Modern glassmorphism design with dark mode
 - 📋 **Drag & Drop** - Upload by dragging files
 - 📎 **Paste Support** - Paste images directly from clipboard
-- 🔄 **Auto-Update** - Automatic app updates without cache clearing
+- � **Camera Support** - Take photos directly on mobile devices
+- �🔄 **Auto-Update** - Automatic app updates without cache clearing
+- 💾 **Smart Preferences** - Remembers your calendar choice
+- 🔁 **Error Recovery** - Retry failed extractions with one click
+- 📳 **Haptic Feedback** - Tactile feedback for actions on mobile
+- 🎯 **Field Confidence** - Visual indicators for uncertain fields
 - ♿ **Accessible** - WCAG AA compliant
 
 ## 🚀 Quick Start
@@ -219,7 +224,22 @@ firebase deploy
 
 ## 📊 Recent Updates
 
-### Version 3.0 (October 31, 2025) 🎃
+### Version 3.1 (October 31, 2025) 🎃
+
+**UX Improvements & Polish**
+- 💾 **Calendar Preference Memory** - Remembers your last calendar choice
+- 🔁 **Smart Error Recovery** - Retry button preserves image and reprocesses
+- 📳 **Haptic Feedback** - Vibration patterns for success, error, warning actions
+- 🎯 **Field Confidence Breakdown** - Visual badges on uncertain fields
+- 📸 **Enhanced Camera Support** - Direct camera access on mobile devices
+- ⚡ **Improved User Flow** - Smoother experience with preserved context
+
+**Backend Enhancements**
+- 📊 **Per-field Confidence** - AI now rates each field individually (title, date, time, location, description)
+- 🎨 **Visual Indicators** - Yellow "Verify" and red "Check!" badges for low confidence fields
+- 🔍 **Better Accuracy** - More granular feedback helps users focus on uncertain extractions
+
+### Version 3.0 (October 31, 2025)
 
 **Major Architecture Change: Calendar Integration**
 - 🚀 **Removed OAuth requirement** - No verification needed!
@@ -312,13 +332,18 @@ This project is licensed under the MIT License.
 - ✅ PWA capabilities with offline support
 - ✅ Auto-update system
 - ✅ Drag & drop + paste support
+- ✅ Calendar preference persistence
+- ✅ Error recovery with retry
+- ✅ Haptic feedback
+- ✅ Field-level confidence indicators
+- ✅ Mobile camera support
 
 ### Planned 📋
 - [ ] Batch processing for multiple posters
-- [ ] Calendar preference persistence
 - [ ] More calendar providers (iCloud, Office 365)
 - [ ] Event reminder customization
 - [ ] Export to ICS with all metadata
+- [ ] Image cropping before processing
 - [ ] Browser extension
 - [ ] Mobile app (React Native)
 - [ ] API for third-party integrations

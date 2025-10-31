@@ -202,7 +202,7 @@ processBtn.addEventListener('click', async () => {
             code: error.code,
             details: error.details
         });
-        handleProcessingError(error);
+        handleProcessingError(error, currentImageBlob);
         processingScreen.classList.add('hidden');
         uploadForm.classList.remove('hidden');
     }
@@ -324,10 +324,23 @@ function blobToBase64(blob) {
 }
 
 function populateVerificationForm(eventData) {
+    // Store field confidence for breakdown
+    const fieldConfidence = eventData.field_confidence || {};
+    
+    // Populate title
     titleInput.value = eventData.title || '';
+    addConfidenceIndicator(titleInput, fieldConfidence.title, 'title');
+    
+    // Populate times
     startTimeInput.value = eventData.start_time || '';
+    addConfidenceIndicator(startTimeInput, fieldConfidence.start_time, 'start time');
+    
     endTimeInput.value = eventData.end_time || '';
+    addConfidenceIndicator(endTimeInput, fieldConfidence.end_time, 'end time');
+    
+    // Populate location
     locationInput.value = eventData.location || '';
+    addConfidenceIndicator(locationInput, fieldConfidence.location, 'location');
     
     // Build enhanced description with extracted metadata
     let description = eventData.description || '';
@@ -360,6 +373,55 @@ function populateVerificationForm(eventData) {
     }
     
     descriptionInput.value = description.trim();
+    addConfidenceIndicator(descriptionInput, fieldConfidence.description, 'description');
+}
+
+/**
+ * Add visual confidence indicator to form fields
+ */
+function addConfidenceIndicator(inputElement, confidence, fieldName) {
+    // Remove any existing indicator
+    const existingIndicator = inputElement.parentElement.querySelector('.confidence-badge');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+    
+    // If no confidence data or high confidence, don't show indicator
+    if (!confidence || confidence === 'high') {
+        inputElement.classList.remove('border-yellow-300', 'border-red-300', 'bg-yellow-50', 'bg-red-50');
+        return;
+    }
+    
+    // Create indicator badge
+    const badge = document.createElement('div');
+    badge.className = 'confidence-badge absolute -top-2 -right-2 z-10';
+    
+    if (confidence === 'medium') {
+        badge.innerHTML = `
+            <div class="flex items-center gap-1 px-2 py-1 bg-yellow-100 border border-yellow-300 rounded-full text-xs font-semibold text-yellow-800 shadow-sm">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                <span>Verify</span>
+            </div>
+        `;
+        inputElement.classList.add('border-yellow-300', 'bg-yellow-50');
+        inputElement.title = `Low confidence detected for ${fieldName}. Please double-check this field.`;
+    } else if (confidence === 'low') {
+        badge.innerHTML = `
+            <div class="flex items-center gap-1 px-2 py-1 bg-red-100 border border-red-300 rounded-full text-xs font-semibold text-red-800 shadow-sm">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
+                <span>Check!</span>
+            </div>
+        `;
+        inputElement.classList.add('border-red-300', 'bg-red-50');
+        inputElement.title = `Very low confidence for ${fieldName}. Please review carefully.`;
+    }
+    
+    // Make parent relative if it isn't already
+    if (getComputedStyle(inputElement.parentElement).position === 'static') {
+        inputElement.parentElement.style.position = 'relative';
+    }
+    
+    inputElement.parentElement.insertBefore(badge, inputElement);
 }
 
 function getEventDetailsFromForm() {
@@ -382,6 +444,9 @@ function showCalendarOptions() {
         return;
     }
 
+    // Get last used calendar preference
+    const lastProvider = localStorage.getItem('preferredCalendar') || 'google';
+
     // Create modal overlay
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in';
@@ -392,28 +457,25 @@ function showCalendarOptions() {
     // Calendar providers
     const providers = [
         {
+            id: 'google',
             name: 'Google Calendar',
             icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" fill="#4285F4"/></svg>`,
             color: 'from-blue-500 to-blue-600',
             action: () => openGoogleCalendar(eventDetails)
         },
         {
+            id: 'apple',
             name: 'Apple Calendar',
             icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="#555555"/></svg>`,
             color: 'from-gray-600 to-gray-700',
             action: () => openAppleCalendar(eventDetails)
         },
         {
+            id: 'outlook',
             name: 'Outlook',
             icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M7 22h10c.552 0 1-.448 1-1V3c0-.552-.448-1-1-1H7c-.552 0-1 .448-1 1v18c0 .552.448 1 1 1zm5-15c2.206 0 4 1.794 4 4s-1.794 4-4 4-4-1.794-4-4 1.794-4 4-4z" fill="#0078D4"/></svg>`,
             color: 'from-blue-600 to-blue-700',
             action: () => openOutlookCalendar(eventDetails)
-        },
-        {
-            name: 'Yahoo Calendar',
-            icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139C1.219 5.15 1.13 5.05 1 5H0v-.5h4.78v.5h-.81c-.264 0-.402.074-.402.222 0 .07.023.148.07.227.557 1.083 1.5 3.026 2.803 5.765.822-1.674 1.631-3.342 2.402-4.961.18-.379.322-.696.322-.895 0-.148-.138-.222-.415-.222H8v-.5h3.669v.5h-.221c-.415 0-.614.148-.614.444 0 .222.085.521.256.896.766 1.674 1.575 3.342 2.403 4.961 1.305-2.738 2.248-4.682 2.805-5.765.047-.079.07-.157.07-.227 0-.148-.138-.222-.401-.222H15v-.5h2.78v.5c-.13.05-.219.15-.435.328-.178.152-.368.538-.618 1.139-1.359 3.265-4.246 9.088-5.652 12.409-.405.902-.916 1.045-1.532-.029-.636-1.18-1.917-3.796-2.853-5.728z" fill="#6001D2"/></svg>`,
-            color: 'from-purple-600 to-purple-700',
-            action: () => openYahooCalendar(eventDetails)
         }
     ];
 
@@ -430,22 +492,26 @@ function showCalendarOptions() {
             </div>
             
             <div class="space-y-3">
-                ${providers.map((provider, index) => `
+                ${providers.map((provider, index) => {
+                    const isPreferred = provider.id === lastProvider;
+                    return `
                     <button 
-                        class="calendar-provider-btn w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-transparent hover:shadow-lg transition-all duration-200 group bg-gradient-to-r hover:${provider.color} hover:text-white"
-                        data-provider="${index}"
+                        class="calendar-provider-btn relative overflow-hidden w-full flex items-center gap-4 p-4 rounded-xl border-2 ${isPreferred ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white'} hover:border-transparent hover:shadow-lg transition-all duration-200 group ${isPreferred ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}"
+                        data-provider="${provider.id}"
                     >
-                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-50 group-hover:bg-white/20 flex items-center justify-center transition-colors">
+                        <div class="absolute inset-0 bg-gradient-to-r ${provider.color} opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                        <div class="relative flex-shrink-0 w-12 h-12 rounded-xl ${isPreferred ? 'bg-white' : 'bg-gray-50'} group-hover:bg-white/20 flex items-center justify-center transition-colors">
                             ${provider.icon}
                         </div>
-                        <div class="flex-1 text-left">
-                            <p class="font-semibold text-gray-900 group-hover:text-white transition-colors">${provider.name}</p>
+                        <div class="relative flex-1 text-left">
+                            <p class="font-semibold ${isPreferred ? 'text-indigo-900' : 'text-gray-900'} group-hover:text-white transition-colors">${provider.name}</p>
+                            ${isPreferred ? '<p class="text-xs text-indigo-600 group-hover:text-white/80 transition-colors">Your preferred choice</p>' : ''}
                         </div>
-                        <svg class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="relative w-5 h-5 ${isPreferred ? 'text-indigo-500' : 'text-gray-400'} group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                         </svg>
                     </button>
-                `).join('')}
+                `}).join('')}
             </div>
             
             <button class="mt-6 w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors" onclick="this.closest('.fixed').remove()">
@@ -457,9 +523,16 @@ function showCalendarOptions() {
     document.body.appendChild(modal);
 
     // Add click handlers
-    modal.querySelectorAll('.calendar-provider-btn').forEach((btn, index) => {
+    modal.querySelectorAll('.calendar-provider-btn').forEach((btn) => {
         btn.onclick = () => {
-            providers[index].action();
+            const providerId = btn.dataset.provider;
+            const provider = providers.find(p => p.id === providerId);
+            
+            // Save preference
+            localStorage.setItem('preferredCalendar', providerId);
+            
+            // Execute action
+            provider.action();
             modal.remove();
         };
     });
@@ -472,6 +545,124 @@ function formatCalendarDate(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+}
+
+/**
+ * Handle calendar app redirect - show helpful message if app opens
+ */
+function handleCalendarAppRedirect(newWindow) {
+    if (!newWindow) return;
+    
+    // Wait a bit, then check if window is still accessible
+    setTimeout(() => {
+        try {
+            // If we can access the window, inject a friendly message
+            if (newWindow && !newWindow.closed) {
+                const helpHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Calendar Opened</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            min-height: 100vh;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            padding: 20px;
+                        }
+                        .container {
+                            background: white;
+                            border-radius: 24px;
+                            padding: 48px 32px;
+                            max-width: 400px;
+                            text-align: center;
+                            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                        }
+                        .icon {
+                            width: 80px;
+                            height: 80px;
+                            margin: 0 auto 24px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        .checkmark {
+                            width: 40px;
+                            height: 40px;
+                            stroke: white;
+                            stroke-width: 3;
+                            fill: none;
+                            stroke-linecap: round;
+                            stroke-linejoin: round;
+                            animation: draw 0.5s ease-out;
+                        }
+                        @keyframes draw {
+                            from { stroke-dasharray: 100; stroke-dashoffset: 100; }
+                            to { stroke-dasharray: 100; stroke-dashoffset: 0; }
+                        }
+                        h1 {
+                            font-size: 24px;
+                            font-weight: 700;
+                            color: #1a202c;
+                            margin-bottom: 12px;
+                        }
+                        p {
+                            font-size: 16px;
+                            color: #718096;
+                            margin-bottom: 32px;
+                            line-height: 1.6;
+                        }
+                        .close-btn {
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            border: none;
+                            padding: 16px 32px;
+                            border-radius: 12px;
+                            font-size: 16px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            width: 100%;
+                            transition: transform 0.2s, box-shadow 0.2s;
+                        }
+                        .close-btn:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+                        }
+                        .close-btn:active {
+                            transform: translateY(0);
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="icon">
+                            <svg class="checkmark" viewBox="0 0 52 52">
+                                <path d="M14 27l8 8 16-16"/>
+                            </svg>
+                        </div>
+                        <h1>Calendar App Opened! ✅</h1>
+                        <p>Your calendar app should be open now. You can safely close this tab.</p>
+                        <button class="close-btn" onclick="window.close()">Close This Tab</button>
+                    </div>
+                </body>
+                </html>
+                `;
+                newWindow.document.open();
+                newWindow.document.write(helpHTML);
+                newWindow.document.close();
+            }
+        } catch (e) {
+            // Cross-origin restriction - can't access the window
+            // This is actually fine, means Google's page loaded
+        }
+    }, 1500);
 }
 
 /**
@@ -488,7 +679,10 @@ function openGoogleCalendar(eventDetails) {
     });
 
     const url = `${baseURL}&${params.toString()}`;
-    window.open(url, '_blank', 'width=800,height=600');
+    const newWindow = window.open(url, '_blank', 'width=800,height=600');
+    
+    // Detect if app opened (user left) and show helpful message
+    handleCalendarAppRedirect(newWindow);
     showSuccess('Opening Google Calendar...');
 }
 
@@ -528,32 +722,11 @@ function openOutlookCalendar(eventDetails) {
     });
 
     const url = `${baseURL}?${params.toString()}`;
-    window.open(url, '_blank', 'width=800,height=600');
+    const newWindow = window.open(url, '_blank', 'width=800,height=600');
+    
+    // Detect if app opened (user left) and show helpful message
+    handleCalendarAppRedirect(newWindow);
     showSuccess('Opening Outlook Calendar...');
-}
-
-/**
- * Open Yahoo Calendar
- */
-function openYahooCalendar(eventDetails) {
-    const baseURL = "https://calendar.yahoo.com/";
-    
-    const startTime = new Date(eventDetails.startTime);
-    const endTime = new Date(eventDetails.endTime);
-    const duration = Math.floor((endTime - startTime) / 1000 / 60 / 60); // hours
-    
-    const params = new URLSearchParams({
-        v: '60',
-        title: eventDetails.title || 'New Event',
-        st: formatCalendarDate(eventDetails.startTime),
-        dur: duration.toString().padStart(2, '0') + '00',
-        desc: eventDetails.description || '',
-        in_loc: eventDetails.location || ''
-    });
-
-    const url = `${baseURL}?${params.toString()}`;
-    window.open(url, '_blank', 'width=800,height=600');
-    showSuccess('Opening Yahoo Calendar...');
 }
 
 /**
@@ -601,9 +774,12 @@ async function addToGoogleCalendar() {
 }
 
 /**
- * Show error message to user
+ * Show error message to user with retry option
  */
-function showError(message) {
+function showError(message, imageBlob = null) {
+    // Haptic feedback on error
+    triggerHapticFeedback('error');
+    
     // Create error notification
     const errorDiv = document.createElement('div');
     errorDiv.className = 'fixed top-4 right-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 max-w-md animate-slide-in border border-red-400';
@@ -615,6 +791,14 @@ function showError(message) {
             <div class="flex-1">
                 <p class="font-bold text-lg">Error</p>
                 <p class="text-sm mt-1 text-white/90">${message}</p>
+                ${imageBlob ? `
+                    <button id="retry-btn" class="mt-3 px-4 py-2 bg-white text-red-600 rounded-lg font-semibold text-sm hover:bg-red-50 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Try Again
+                        </span>
+                    </button>
+                ` : ''}
             </div>
             <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-white/70 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -622,13 +806,67 @@ function showError(message) {
         </div>
     `;
     document.body.appendChild(errorDiv);
-    setTimeout(() => errorDiv.remove(), 6000);
+    
+    // Add retry handler if image is available
+    if (imageBlob) {
+        const retryBtn = document.getElementById('retry-btn');
+        if (retryBtn) {
+            retryBtn.onclick = async () => {
+                errorDiv.remove();
+                // Keep the image and retry processing
+                currentImageBlob = imageBlob;
+                uploadForm.classList.add('hidden');
+                processingScreen.classList.remove('hidden');
+                
+                try {
+                    processingMessage.textContent = '🔄 Retrying...';
+                    const compressedImage = await compressImage(imageBlob);
+                    
+                    processingMessage.textContent = '🤖 Analyzing poster with AI...';
+                    const imageData = await blobToBase64(compressedImage);
+                    const mimeType = compressedImage.type;
+                    
+                    const result = await parseEventImage({ 
+                        imageData: imageData.split(',')[1],
+                        mimeType 
+                    });
+                    
+                    currentEventData = result.data.eventData;
+                    
+                    if (result.data.warning) {
+                        showWarning(result.data.warning);
+                    }
+                    
+                    if (currentEventData.warnings && currentEventData.warnings.length > 0) {
+                        showWarning(currentEventData.warnings.join('. '));
+                    }
+
+                    populateVerificationForm(currentEventData);
+                    processingScreen.classList.add('hidden');
+                    verificationScreen.classList.remove('hidden');
+                    document.getElementById('main-container').classList.add('verification-mode');
+                    showConfidenceIndicator(currentEventData.confidence);
+                    
+                } catch (error) {
+                    console.error("Retry failed:", error);
+                    handleProcessingError(error, imageBlob);
+                    processingScreen.classList.add('hidden');
+                    uploadForm.classList.remove('hidden');
+                }
+            };
+        }
+    }
+    
+    setTimeout(() => errorDiv.remove(), 8000);
 }
 
 /**
  * Show warning message to user
  */
 function showWarning(message) {
+    // Haptic feedback on warning
+    triggerHapticFeedback('warning');
+    
     const warningDiv = document.createElement('div');
     warningDiv.className = 'fixed top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 px-6 py-4 rounded-2xl shadow-2xl z-50 max-w-md animate-slide-in border border-yellow-300';
     warningDiv.innerHTML = `
@@ -650,9 +888,12 @@ function showWarning(message) {
 }
 
 /**
- * Show success message to user
+ * Show success message to user with haptic feedback
  */
 function showSuccess(message) {
+    // Haptic feedback on success
+    triggerHapticFeedback('success');
+    
     const successDiv = document.createElement('div');
     successDiv.className = 'fixed top-4 right-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 max-w-md animate-slide-in border border-green-400';
     successDiv.innerHTML = `
@@ -674,10 +915,36 @@ function showSuccess(message) {
 }
 
 /**
- * Handle processing errors with specific messages
+ * Trigger haptic feedback on mobile devices
  */
-function handleProcessingError(error) {
+function triggerHapticFeedback(type = 'light') {
+    if ('vibrate' in navigator) {
+        switch(type) {
+            case 'success':
+                navigator.vibrate([50, 30, 50]); // Double pulse
+                break;
+            case 'error':
+                navigator.vibrate([100, 50, 100, 50, 100]); // Triple pulse
+                break;
+            case 'warning':
+                navigator.vibrate([70]); // Single pulse
+                break;
+            case 'light':
+            default:
+                navigator.vibrate(20); // Quick tap
+                break;
+        }
+    }
+}
+
+/**
+ * Handle processing errors with specific messages and retry option
+ */
+function handleProcessingError(error, imageBlob = null) {
     console.log("handleProcessingError called with:", error);
+    
+    // Haptic feedback on error
+    triggerHapticFeedback('error');
     
     let message = "Something went wrong processing your image. Please try again.";
     
@@ -705,7 +972,7 @@ function handleProcessingError(error) {
     }
     
     console.log("Showing error message:", message);
-    showError(message);
+    showError(message, imageBlob);
 }
 
 /**

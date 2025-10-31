@@ -1,6 +1,6 @@
 // Service Worker for EventSnap PWA with auto-update capability
 // Update this version number whenever you deploy changes
-const CACHE_VERSION = 'eventsnap-v1.0.1-' + new Date().getTime();
+const CACHE_VERSION = 'eventsnap-v3.1.0-' + new Date().getTime();
 const CACHE_NAME = CACHE_VERSION;
 
 // Files to cache for offline functionality

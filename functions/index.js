@@ -56,6 +56,13 @@ TASK: Return ONLY a valid JSON object with this exact structure:
   "location": "venue/address",
   "description": "additional details",
   "confidence": "high|medium|low",
+  "field_confidence": {
+    "title": "high|medium|low",
+    "start_time": "high|medium|low",
+    "end_time": "high|medium|low",
+    "location": "high|medium|low",
+    "description": "high|medium|low"
+  },
   "warnings": ["array of any concerns or uncertainties"],
   "recurring": {
     "is_recurring": true/false,
@@ -106,13 +113,17 @@ MULTI-LANGUAGE SUPPORT:
 
 GENERAL RULES:
 20. Confidence levels:
-   - "high": Clear event poster with date, time, location, and additional details visible
-   - "medium": Event poster but missing some details or unclear
-   - "low": Not an event poster, or missing critical information
+   - Overall "confidence": Rate the entire extraction (high/medium/low)
+   - "field_confidence": Rate EACH field individually based on clarity:
+     * "high": Field is clearly visible and unambiguous
+     * "medium": Field is present but somewhat unclear or estimated
+     * "low": Field is missing, heavily inferred, or very uncertain
+   - Example: Clear title but unclear date → title: "high", start_time: "medium"
 21. Add warnings array for any uncertainties
 22. If a field cannot be determined, use empty string "" or appropriate defaults
 23. For nested objects (recurring, registration, organizer), include all fields even if empty
-24. Return ONLY the JSON object, no markdown formatting or extra text
+24. For field_confidence, always include all 5 fields (title, start_time, end_time, location, description)
+25. Return ONLY the JSON object, no markdown formatting or extra text
 
 Analyze the image now:`;
 
