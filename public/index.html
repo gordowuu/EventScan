@@ -138,6 +138,17 @@
             }
         }
         
+        @keyframes scale-in {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
         @keyframes pulse-glow {
             0%, 100% {
                 box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
@@ -153,6 +164,10 @@
         
         .animate-fade-in {
             animation: fade-in 0.5s ease-out;
+        }
+        
+        .animate-scale-in {
+            animation: scale-in 0.3s ease-out;
         }
         
         .pulse-glow {
@@ -315,8 +330,6 @@
             border-color: rgba(129, 140, 248, 0.3);
         }
     </style>
-    <!-- Google API Client Library -->
-    <script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body class="text-gray-800 flex items-center justify-center">
     <!-- Dark Mode Toggle -->
@@ -488,10 +501,6 @@
         </footer>
     </div>
 
-    <!-- Google API Scripts -->
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
     <!-- Tesseract.js removed - now using Gemini Vision API directly -->
     <script type="module" src="/script.js"></script>
 </body>

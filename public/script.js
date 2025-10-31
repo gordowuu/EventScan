@@ -15,21 +15,10 @@ const firebaseConfig = {
   measurementId: "G-C6B8MPB0H6"
 };
 
-// --- Google API Configuration ---
-// TODO: Move to secure environment configuration
-const GOOGLE_CLIENT_ID = '804076361371-qbegh1hmbjrtd4ub6m23kpfmb9qhcchv.apps.googleusercontent.com';
-const GOOGLE_API_KEY = firebaseConfig.apiKey;
-const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"];
-const SCOPES = "https://www.googleapis.com/auth/calendar.events";
-
 // Image processing configuration
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB max
 const COMPRESSION_QUALITY = 0.85;
 const MAX_DIMENSION = 2048;
-
-let tokenClient;
-let gapiInited = false;
-let gisInited = false;
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -104,47 +93,11 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
     }
 });
 
-// --- Load and Initialize Google API Client ---
+// --- App Initialization ---
 window.onload = () => {
-    // Initialize Google APIs when scripts are loaded
-    if (window.gapi) {
-        gapi.load('client', initializeGapiClient);
-    }
-    
-    if (window.google?.accounts) {
-        initializeGisClient();
-    }
-    
     // Add file size validation to input
     imageInput.addEventListener('change', validateFileSize);
 };
-
-async function initializeGapiClient() {
-    try {
-        await gapi.client.init({
-            apiKey: GOOGLE_API_KEY,
-            discoveryDocs: DISCOVERY_DOCS,
-        });
-        gapiInited = true;
-        console.log('Google API Client initialized successfully');
-    } catch (error) {
-        console.error("Error initializing Google API Client:", error);
-    }
-}
-
-function initializeGisClient() {
-    try {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: SCOPES,
-            callback: '', // Callback is handled by the promise
-        });
-        gisInited = true;
-        console.log('Google Identity Services initialized successfully');
-    } catch (error) {
-        console.error("Error initializing Google Sign-In:", error);
-    }
-}
 
 // --- Event Listeners ---
 
@@ -265,7 +218,7 @@ backBtn.addEventListener('click', () => {
     retakeBtn.click();
 });
 
-createGcalBtn.addEventListener('click', addToGoogleCalendar);
+createGcalBtn.addEventListener('click', showCalendarOptions);
 
 // --- Core Functions ---
 
@@ -420,86 +373,231 @@ function getEventDetailsFromForm() {
 }
 
 /**
- * Handles the entire Google Calendar creation flow.
+ * Show calendar provider selection modal
  */
-async function addToGoogleCalendar() {
-    if (!gapiInited || !gisInited) {
-        alert("Google API is not ready yet. Please check your browser console for errors and verify your Client ID configuration.");
-        return;
-    }
-
-    // 1. Get user's permission via OAuth
-    try {
-        await new Promise((resolve, reject) => {
-            tokenClient.callback = (resp) => {
-                if (resp.error !== undefined) {
-                    reject(resp);
-                }
-                resolve(resp);
-            };
-            tokenClient.requestAccessToken({ prompt: 'consent' });
-        });
-    } catch (err) {
-        console.error("Error getting user consent:", err);
-        alert("Could not get permission to access your calendar. Please try again.");
-        return;
-    }
-
-
-    // 2. Prepare event data for the API
+function showCalendarOptions() {
     const eventDetails = getEventDetailsFromForm();
     if (!eventDetails.startTime || !eventDetails.endTime) {
-        alert("Please ensure both a start and end time are set before creating a calendar event.");
+        showError("Please ensure both a start and end time are set before creating a calendar event.");
         return;
     }
 
-    const event = {
-        'summary': eventDetails.title,
-        'location': eventDetails.location,
-        'description': eventDetails.description,
-        'start': {
-            'dateTime': new Date(eventDetails.startTime).toISOString(),
-            'timeZone': Intl.DateTimeFormat().resolvedOptions().timeZone,
-        },
-        'end': {
-            'dateTime': new Date(eventDetails.endTime).toISOString(),
-            'timeZone': Intl.DateTimeFormat().resolvedOptions().timeZone,
-        },
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in';
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
     };
 
-    // 3. Make the API request to create the event
-    createGcalBtn.disabled = true;
-    createGcalBtn.textContent = 'Creating...';
-    
-    try {
-        const request = gapi.client.calendar.events.insert({
-            'calendarId': 'primary',
-            'resource': event,
-        });
-
-        const response = await request;
-        console.log('Event created: ', response.result);
-        showSuccess(`Event "${response.result.summary}" was successfully added to your Google Calendar!`);
-        
-        // Reset form after success
-        setTimeout(() => {
-            verificationScreen.classList.add('hidden');
-            uploadForm.classList.remove('hidden');
-            retakeBtn.click();
-        }, 2000);
-    } catch (err) {
-        console.error('Error creating event:', err);
-        let message = 'Failed to create calendar event. Please try again.';
-        
-        if (err.result?.error?.message) {
-            message = err.result.error.message;
+    // Calendar providers
+    const providers = [
+        {
+            name: 'Google Calendar',
+            icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" fill="#4285F4"/></svg>`,
+            color: 'from-blue-500 to-blue-600',
+            action: () => openGoogleCalendar(eventDetails)
+        },
+        {
+            name: 'Apple Calendar',
+            icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="#555555"/></svg>`,
+            color: 'from-gray-600 to-gray-700',
+            action: () => openAppleCalendar(eventDetails)
+        },
+        {
+            name: 'Outlook',
+            icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M7 22h10c.552 0 1-.448 1-1V3c0-.552-.448-1-1-1H7c-.552 0-1 .448-1 1v18c0 .552.448 1 1 1zm5-15c2.206 0 4 1.794 4 4s-1.794 4-4 4-4-1.794-4-4 1.794-4 4-4z" fill="#0078D4"/></svg>`,
+            color: 'from-blue-600 to-blue-700',
+            action: () => openOutlookCalendar(eventDetails)
+        },
+        {
+            name: 'Yahoo Calendar',
+            icon: `<svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor"><path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139C1.219 5.15 1.13 5.05 1 5H0v-.5h4.78v.5h-.81c-.264 0-.402.074-.402.222 0 .07.023.148.07.227.557 1.083 1.5 3.026 2.803 5.765.822-1.674 1.631-3.342 2.402-4.961.18-.379.322-.696.322-.895 0-.148-.138-.222-.415-.222H8v-.5h3.669v.5h-.221c-.415 0-.614.148-.614.444 0 .222.085.521.256.896.766 1.674 1.575 3.342 2.403 4.961 1.305-2.738 2.248-4.682 2.805-5.765.047-.079.07-.157.07-.227 0-.148-.138-.222-.401-.222H15v-.5h2.78v.5c-.13.05-.219.15-.435.328-.178.152-.368.538-.618 1.139-1.359 3.265-4.246 9.088-5.652 12.409-.405.902-.916 1.045-1.532-.029-.636-1.18-1.917-3.796-2.853-5.728z" fill="#6001D2"/></svg>`,
+            color: 'from-purple-600 to-purple-700',
+            action: () => openYahooCalendar(eventDetails)
         }
-        
-        showError(message);
-    } finally {
-        createGcalBtn.disabled = false;
-        createGcalBtn.textContent = 'Add to Google Calendar';
-    }
+    ];
+
+    modal.innerHTML = `
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-scale-in">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Add to Calendar</h3>
+                <p class="text-sm text-gray-600">Choose your preferred calendar app</p>
+            </div>
+            
+            <div class="space-y-3">
+                ${providers.map((provider, index) => `
+                    <button 
+                        class="calendar-provider-btn w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-transparent hover:shadow-lg transition-all duration-200 group bg-gradient-to-r hover:${provider.color} hover:text-white"
+                        data-provider="${index}"
+                    >
+                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-50 group-hover:bg-white/20 flex items-center justify-center transition-colors">
+                            ${provider.icon}
+                        </div>
+                        <div class="flex-1 text-left">
+                            <p class="font-semibold text-gray-900 group-hover:text-white transition-colors">${provider.name}</p>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                `).join('')}
+            </div>
+            
+            <button class="mt-6 w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors" onclick="this.closest('.fixed').remove()">
+                Cancel
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Add click handlers
+    modal.querySelectorAll('.calendar-provider-btn').forEach((btn, index) => {
+        btn.onclick = () => {
+            providers[index].action();
+            modal.remove();
+        };
+    });
+}
+
+/**
+ * Format date for calendar URLs (YYYYMMDDTHHMMSSZ)
+ */
+function formatCalendarDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+}
+
+/**
+ * Open Google Calendar with pre-filled event
+ */
+function openGoogleCalendar(eventDetails) {
+    const baseURL = "https://www.google.com/calendar/render?action=TEMPLATE";
+    
+    const params = new URLSearchParams({
+        text: eventDetails.title || 'New Event',
+        dates: `${formatCalendarDate(eventDetails.startTime)}/${formatCalendarDate(eventDetails.endTime)}`,
+        details: eventDetails.description || '',
+        location: eventDetails.location || ''
+    });
+
+    const url = `${baseURL}&${params.toString()}`;
+    window.open(url, '_blank', 'width=800,height=600');
+    showSuccess('Opening Google Calendar...');
+}
+
+/**
+ * Open Apple Calendar (iCal format)
+ */
+function openAppleCalendar(eventDetails) {
+    const icsContent = generateICS(eventDetails);
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${eventDetails.title || 'event'}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    showSuccess('Calendar file downloaded. Open it to add to Apple Calendar.');
+}
+
+/**
+ * Open Outlook Calendar
+ */
+function openOutlookCalendar(eventDetails) {
+    const baseURL = "https://outlook.live.com/calendar/0/deeplink/compose";
+    
+    const params = new URLSearchParams({
+        subject: eventDetails.title || 'New Event',
+        startdt: new Date(eventDetails.startTime).toISOString(),
+        enddt: new Date(eventDetails.endTime).toISOString(),
+        body: eventDetails.description || '',
+        location: eventDetails.location || '',
+        path: '/calendar/action/compose',
+        rru: 'addevent'
+    });
+
+    const url = `${baseURL}?${params.toString()}`;
+    window.open(url, '_blank', 'width=800,height=600');
+    showSuccess('Opening Outlook Calendar...');
+}
+
+/**
+ * Open Yahoo Calendar
+ */
+function openYahooCalendar(eventDetails) {
+    const baseURL = "https://calendar.yahoo.com/";
+    
+    const startTime = new Date(eventDetails.startTime);
+    const endTime = new Date(eventDetails.endTime);
+    const duration = Math.floor((endTime - startTime) / 1000 / 60 / 60); // hours
+    
+    const params = new URLSearchParams({
+        v: '60',
+        title: eventDetails.title || 'New Event',
+        st: formatCalendarDate(eventDetails.startTime),
+        dur: duration.toString().padStart(2, '0') + '00',
+        desc: eventDetails.description || '',
+        in_loc: eventDetails.location || ''
+    });
+
+    const url = `${baseURL}?${params.toString()}`;
+    window.open(url, '_blank', 'width=800,height=600');
+    showSuccess('Opening Yahoo Calendar...');
+}
+
+/**
+ * Generate ICS file content for Apple Calendar and others
+ */
+function generateICS(eventDetails) {
+    const startDate = formatCalendarDate(eventDetails.startTime);
+    const endDate = formatCalendarDate(eventDetails.endTime);
+    const timestamp = formatCalendarDate(new Date().toISOString());
+    
+    // Escape special characters in ICS format
+    const escapeICS = (str) => {
+        if (!str) return '';
+        return str.replace(/\\/g, '\\\\')
+                  .replace(/;/g, '\\;')
+                  .replace(/,/g, '\\,')
+                  .replace(/\n/g, '\\n');
+    };
+
+    return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//EventSnap//Event Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${timestamp}@eventsnap.web.app
+DTSTAMP:${timestamp}
+DTSTART:${startDate}
+DTEND:${endDate}
+SUMMARY:${escapeICS(eventDetails.title)}
+DESCRIPTION:${escapeICS(eventDetails.description)}
+LOCATION:${escapeICS(eventDetails.location)}
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+END:VCALENDAR`;
+}
+
+/**
+ * Legacy function - replaced by calendar options modal
+ * Keeping for backward compatibility during transition
+ */
+async function addToGoogleCalendar() {
+    showCalendarOptions();
 }
 
 /**
