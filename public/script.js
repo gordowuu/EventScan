@@ -734,12 +734,78 @@ function showConfidenceIndicator(confidence) {
     }
 }
 
-// --- PWA Service Worker ---
+// --- PWA Service Worker with Auto-Update ---
 if ('serviceWorker' in navigator) {
+    let refreshing = false;
+    
+    // Detect when a new service worker is waiting
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        console.log('[SW] Controller changed, reloading page...');
+        window.location.reload();
+    });
+
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW registered.'))
-            .catch(err => console.error('SW registration failed:', err));
+            .then(reg => {
+                console.log('[SW] Service Worker registered');
+                
+                // Check for updates every 30 seconds
+                setInterval(() => {
+                    reg.update();
+                }, 30000);
+                
+                // Listen for waiting service worker
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    console.log('[SW] New Service Worker found!');
+                    
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New service worker is ready, show update notification
+                            showUpdateNotification(newWorker);
+                        }
+                    });
+                });
+            })
+            .catch(err => console.error('[SW] Registration failed:', err));
     });
 }
 
+/**
+ * Show update notification when new version is available
+ */
+function showUpdateNotification(worker) {
+    const updateDiv = document.createElement('div');
+    updateDiv.className = 'fixed bottom-4 right-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 max-w-md animate-slide-in border border-indigo-400';
+    updateDiv.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-lg">Update Available! 🎉</p>
+                <p class="text-sm mt-1 text-white/90">A new version of EventSnap is ready.</p>
+                <button id="update-btn" class="mt-3 px-4 py-2 bg-white text-indigo-600 rounded-lg font-semibold text-sm hover:bg-indigo-50 transition-colors">
+                    Update Now
+                </button>
+                <button id="dismiss-update-btn" class="ml-2 px-4 py-2 bg-white/20 text-white rounded-lg font-semibold text-sm hover:bg-white/30 transition-colors">
+                    Later
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(updateDiv);
+    
+    // Update button handler
+    document.getElementById('update-btn').onclick = () => {
+        worker.postMessage({ type: 'SKIP_WAITING' });
+        updateDiv.remove();
+    };
+    
+    // Dismiss button handler
+    document.getElementById('dismiss-update-btn').onclick = () => {
+        updateDiv.remove();
+    };
+}
