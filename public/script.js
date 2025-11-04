@@ -16,7 +16,7 @@ const firebaseConfig = {
 };
 
 // Image processing configuration
-const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB max
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB max
 const COMPRESSION_QUALITY = 0.85;
 const MAX_DIMENSION = 2048;
 
@@ -48,6 +48,13 @@ const locationInput = document.getElementById('location');
 const descriptionInput = document.getElementById('description');
 const backBtn = document.getElementById('back-btn');
 const createGcalBtn = document.getElementById('create-gcal-btn');
+
+// Recurring event fields
+const recurringSection = document.getElementById('recurring-section');
+const isRecurringCheckbox = document.getElementById('is-recurring');
+const recurringOptions = document.getElementById('recurring-options');
+const recurringFrequency = document.getElementById('recurring-frequency');
+const recurringPattern = document.getElementById('recurring-pattern');
 
 let currentImageBlob = null;
 let currentEventData = null; // Store event data with confidence info
@@ -162,7 +169,11 @@ processBtn.addEventListener('click', async () => {
     processingScreen.classList.remove('hidden');
 
     try {
-        processingMessage.textContent = '📸 Compressing image...';
+        // Detect QR codes first (fast operation)
+        processingMessage.textContent = '🔍 Scanning for QR codes...';
+        const qrUrls = await detectQRCodes(currentImageBlob);
+        
+        processingMessage.textContent = '📸 Enhancing & compressing image...';
         const compressedImage = await compressImage(currentImageBlob);
         
         processingMessage.textContent = '🤖 Analyzing poster with AI...';
@@ -176,6 +187,15 @@ processBtn.addEventListener('click', async () => {
         
         currentEventData = result.data.eventData;
         
+        // If QR code URL was detected and no registration URL exists, use QR code
+        if (qrUrls.length > 0 && !currentEventData.registration?.url) {
+            if (!currentEventData.registration) {
+                currentEventData.registration = {};
+            }
+            currentEventData.registration.url = qrUrls[0];
+            currentEventData.registration.source = 'qr_code';
+        }
+        
         // Show warnings if any
         if (result.data.warning) {
             showWarning(result.data.warning);
@@ -183,6 +203,11 @@ processBtn.addEventListener('click', async () => {
         
         if (currentEventData.warnings && currentEventData.warnings.length > 0) {
             showWarning(currentEventData.warnings.join('. '));
+        }
+        
+        // Show success message if QR code was detected
+        if (qrUrls.length > 0) {
+            showSuccess('📱 QR code detected and registration link extracted!');
         }
 
         populateVerificationForm(currentEventData);
@@ -220,12 +245,21 @@ backBtn.addEventListener('click', () => {
 
 createGcalBtn.addEventListener('click', showCalendarOptions);
 
+// Recurring event checkbox handler
+isRecurringCheckbox.addEventListener('change', () => {
+    if (isRecurringCheckbox.checked) {
+        recurringOptions.classList.remove('hidden');
+    } else {
+        recurringOptions.classList.add('hidden');
+    }
+});
+
 // --- Core Functions ---
 
 function validateFileSize(e) {
     const file = e.target.files[0];
     if (file && file.size > MAX_IMAGE_SIZE) {
-        showError(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Please use an image under 4MB.`);
+        showError(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Please use an image under 10MB.`);
         imageInput.value = '';
         return false;
     }
@@ -243,7 +277,7 @@ function handleFileSelect(file) {
     
     // Validate file size
     if (file.size > MAX_IMAGE_SIZE) {
-        showError(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Please use an image under 4MB.`);
+        showError(`Image is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Please use an image under 10MB.`);
         return;
     }
     
@@ -288,7 +322,15 @@ async function compressImage(file) {
                 canvas.height = height;
                 
                 const ctx = canvas.getContext('2d');
+                
+                // Image enhancement for better AI extraction
+                // 1. Auto-contrast enhancement
+                ctx.filter = 'contrast(1.1) brightness(1.05)';
+                
                 ctx.drawImage(img, 0, 0, width, height);
+                
+                // Reset filter
+                ctx.filter = 'none';
                 
                 canvas.toBlob(
                     (blob) => {
@@ -308,6 +350,53 @@ async function compressImage(file) {
             img.onerror = () => reject(new Error('Failed to load image'));
         };
         reader.onerror = () => reject(new Error('Failed to read file'));
+    });
+}
+
+/**
+ * Detect and extract QR codes from image
+ * Returns array of detected URLs
+ */
+async function detectQRCodes(imageFile) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Scan for QR codes using jsQR library
+                if (typeof jsQR !== 'undefined') {
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+                    
+                    if (code && code.data) {
+                        // Check if it's a URL
+                        try {
+                            new URL(code.data);
+                            resolve([code.data]);
+                            return;
+                        } catch (e) {
+                            // Not a URL, ignore
+                        }
+                    }
+                }
+                
+                resolve([]);
+            };
+            img.onerror = () => resolve([]);
+        };
+        reader.onerror = () => resolve([]);
     });
 }
 
@@ -342,13 +431,28 @@ function populateVerificationForm(eventData) {
     locationInput.value = eventData.location || '';
     addConfidenceIndicator(locationInput, fieldConfidence.location, 'location');
     
+    // Populate recurring event info
+    if (eventData.recurring?.is_recurring) {
+        recurringSection.classList.remove('hidden');
+        isRecurringCheckbox.checked = true;
+        recurringOptions.classList.remove('hidden');
+        
+        // Set frequency
+        const freq = eventData.recurring.frequency?.toLowerCase() || 'weekly';
+        recurringFrequency.value = freq;
+        
+        // Set pattern
+        recurringPattern.value = eventData.recurring.pattern || '';
+    } else {
+        recurringSection.classList.add('hidden');
+        isRecurringCheckbox.checked = false;
+        recurringOptions.classList.add('hidden');
+    }
+    
     // Build enhanced description with extracted metadata
     let description = eventData.description || '';
     
-    // Add recurring event info
-    if (eventData.recurring?.is_recurring) {
-        description += `\n\n🔄 Recurring Event: ${eventData.recurring.pattern}`;
-    }
+    // Note: Don't add recurring to description since we have dedicated UI now
     
     // Add registration info
     if (eventData.registration?.url) {
@@ -425,13 +529,26 @@ function addConfidenceIndicator(inputElement, confidence, fieldName) {
 }
 
 function getEventDetailsFromForm() {
-    return {
+    const eventDetails = {
         title: titleInput.value,
         startTime: startTimeInput.value,
         endTime: endTimeInput.value,
         location: locationInput.value,
         description: descriptionInput.value,
     };
+    
+    // Get recurring data from UI (user may have edited it)
+    if (isRecurringCheckbox.checked) {
+        eventDetails.recurring = {
+            is_recurring: true,
+            frequency: recurringFrequency.value,
+            pattern: recurringPattern.value
+        };
+    } else {
+        eventDetails.recurring = null;
+    }
+    
+    return eventDetails;
 }
 
 /**
@@ -545,6 +662,82 @@ function formatCalendarDate(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+}
+
+/**
+ * Convert recurring event info to RRULE format
+ * Returns RRULE string for ICS files and Google Calendar
+ */
+function generateRRule(recurringData, startTime) {
+    if (!recurringData?.is_recurring || !recurringData.frequency) {
+        return null;
+    }
+    
+    const frequency = recurringData.frequency.toUpperCase();
+    const pattern = recurringData.pattern || '';
+    const startDate = new Date(startTime);
+    
+    // Map frequency to RRULE FREQ values
+    const freqMap = {
+        'DAILY': 'DAILY',
+        'WEEKLY': 'WEEKLY',
+        'MONTHLY': 'MONTHLY',
+        'YEARLY': 'YEARLY',
+        'CUSTOM': 'WEEKLY' // Default custom to weekly
+    };
+    
+    const freq = freqMap[frequency] || 'WEEKLY';
+    
+    // Build RRULE
+    let rrule = `FREQ=${freq}`;
+    
+    // For weekly events, parse multiple days from pattern
+    if (freq === 'WEEKLY') {
+        const dayMap = {
+            'sunday': 'SU', 'sun': 'SU',
+            'monday': 'MO', 'mon': 'MO',
+            'tuesday': 'TU', 'tue': 'TU', 'tues': 'TU',
+            'wednesday': 'WE', 'wed': 'WE',
+            'thursday': 'TH', 'thu': 'TH', 'thur': 'TH', 'thurs': 'TH',
+            'friday': 'FR', 'fri': 'FR',
+            'saturday': 'SA', 'sat': 'SA'
+        };
+        
+        // Extract days from pattern text
+        const patternLower = pattern.toLowerCase();
+        const foundDays = [];
+        
+        for (const [dayName, dayCode] of Object.entries(dayMap)) {
+            if (patternLower.includes(dayName)) {
+                if (!foundDays.includes(dayCode)) {
+                    foundDays.push(dayCode);
+                }
+            }
+        }
+        
+        // If days found in pattern, use them; otherwise use start date's day
+        if (foundDays.length > 0) {
+            // Sort days in week order
+            const weekOrder = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+            foundDays.sort((a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b));
+            rrule += `;BYDAY=${foundDays.join(',')}`;
+        } else {
+            const days = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+            const dayOfWeek = days[startDate.getDay()];
+            rrule += `;BYDAY=${dayOfWeek}`;
+        }
+    }
+    
+    // For monthly events, add day of month
+    if (freq === 'MONTHLY') {
+        const dayOfMonth = startDate.getDate();
+        rrule += `;BYMONTHDAY=${dayOfMonth}`;
+    }
+    
+    // No COUNT or UNTIL - creates indefinite recurring event
+    // User can set end date in their calendar app
+    
+    return rrule;
 }
 
 /**
@@ -677,6 +870,14 @@ function openGoogleCalendar(eventDetails) {
         details: eventDetails.description || '',
         location: eventDetails.location || ''
     });
+    
+    // Add recurring event support
+    if (eventDetails.recurring) {
+        const rrule = generateRRule(eventDetails.recurring, eventDetails.startTime);
+        if (rrule) {
+            params.append('recur', `RRULE:${rrule}`);
+        }
+    }
 
     const url = `${baseURL}&${params.toString()}`;
     const newWindow = window.open(url, '_blank', 'width=800,height=600');
@@ -720,6 +921,16 @@ function openOutlookCalendar(eventDetails) {
         path: '/calendar/action/compose',
         rru: 'addevent'
     });
+    
+    // Add recurring event support
+    // Note: Outlook's URL API has limited recurrence support
+    // For complex patterns, users can edit after creation
+    if (eventDetails.recurring?.is_recurring) {
+        const freq = eventDetails.recurring.frequency?.toUpperCase();
+        if (freq === 'DAILY' || freq === 'WEEKLY' || freq === 'MONTHLY') {
+            params.append('recurrence', freq.toLowerCase());
+        }
+    }
 
     const url = `${baseURL}?${params.toString()}`;
     const newWindow = window.open(url, '_blank', 'width=800,height=600');
@@ -758,7 +969,7 @@ DTSTART:${startDate}
 DTEND:${endDate}
 SUMMARY:${escapeICS(eventDetails.title)}
 DESCRIPTION:${escapeICS(eventDetails.description)}
-LOCATION:${escapeICS(eventDetails.location)}
+LOCATION:${escapeICS(eventDetails.location)}${eventDetails.recurring && generateRRule(eventDetails.recurring, eventDetails.startTime) ? '\nRRULE:' + generateRRule(eventDetails.recurring, eventDetails.startTime) : ''}
 STATUS:CONFIRMED
 SEQUENCE:0
 END:VEVENT
@@ -956,7 +1167,7 @@ function handleProcessingError(error, imageBlob = null) {
     } else if (error.message?.includes('INVALID_IMAGE')) {
         message = "This image format is not supported. Please use JPG or PNG.";
     } else if (error.message?.includes('IMAGE_TOO_LARGE')) {
-        message = "The image is too large. Please use an image under 4MB.";
+        message = "The image is too large. Please use an image under 10MB.";
     } else if (error.message?.includes('QUOTA_EXCEEDED')) {
         message = "The service is busy right now. Please try again in a moment.";
     } else if (error.message?.includes('network') || error.message?.includes('fetch')) {

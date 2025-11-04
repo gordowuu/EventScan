@@ -14,6 +14,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- QR Code Scanner Library -->
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+    
     <!-- PWA tags for home screen icon and full-screen mode -->
     <link rel="apple-touch-icon" href="/icons/icon-144x144.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -300,6 +303,55 @@
             background: linear-gradient(135deg, rgba(129, 140, 248, 0.05) 0%, rgba(192, 132, 252, 0.05) 100%);
         }
         
+        /* Dark mode recurring section */
+        body.dark-mode #recurring-section .bg-purple-50 {
+            background: rgba(139, 92, 246, 0.1) !important;
+        }
+        
+        body.dark-mode #recurring-section .border-purple-200 {
+            border-color: rgba(139, 92, 246, 0.3) !important;
+        }
+        
+        body.dark-mode #recurring-section .text-purple-900 {
+            color: #e9d5ff !important;
+        }
+        
+        body.dark-mode #recurring-section .text-purple-600 {
+            color: #c084fc !important;
+        }
+        
+        body.dark-mode #recurring-section .text-gray-700 {
+            color: #cbd5e1 !important;
+        }
+        
+        body.dark-mode #recurring-section .text-gray-500 {
+            color: #94a3b8 !important;
+        }
+        
+        body.dark-mode #recurring-section select {
+            background: rgba(15, 23, 42, 0.5);
+            border-color: rgba(139, 92, 246, 0.3);
+            color: #e2e8f0;
+        }
+        
+        body.dark-mode #recurring-section select:focus {
+            border-color: #c084fc;
+        }
+        
+        body.dark-mode #recurring-section input[type="text"] {
+            background: rgba(15, 23, 42, 0.5);
+            border-color: rgba(139, 92, 246, 0.3);
+            color: #e2e8f0;
+        }
+        
+        body.dark-mode #recurring-section input[type="text"]::placeholder {
+            color: #64748b;
+        }
+        
+        body.dark-mode #recurring-section input[type="text"]:focus {
+            border-color: #c084fc;
+        }
+        
         /* Dark mode toggle button */
         .theme-toggle {
             position: fixed;
@@ -465,6 +517,44 @@
                             <label for="location" class="block text-base font-bold text-gray-700 mb-2">Location</label>
                             <input type="text" id="location" placeholder="Add event location" class="block w-full px-5 py-4 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-all">
                         </div>
+                        
+                        <!-- Recurring Event Section -->
+                        <div id="recurring-section" class="hidden">
+                            <div class="p-4 bg-purple-50 border-2 border-purple-200 rounded-xl">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    <label class="block text-base font-bold text-purple-900">Recurring Event</label>
+                                </div>
+                                
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-3">
+                                        <input type="checkbox" id="is-recurring" class="w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                                        <label for="is-recurring" class="text-sm font-medium text-gray-700">This is a recurring event</label>
+                                    </div>
+                                    
+                                    <div id="recurring-options" class="hidden space-y-3 pl-8">
+                                        <div>
+                                            <label for="recurring-frequency" class="block text-sm font-semibold text-gray-700 mb-1">Frequency</label>
+                                            <select id="recurring-frequency" class="block w-full px-4 py-2 text-sm rounded-lg border-2 border-purple-200 focus:border-purple-500 transition-all">
+                                                <option value="weekly">Weekly</option>
+                                                <option value="daily">Daily</option>
+                                                <option value="monthly">Monthly</option>
+                                                <option value="yearly">Yearly</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div>
+                                            <label for="recurring-pattern" class="block text-sm font-semibold text-gray-700 mb-1">Pattern</label>
+                                            <input type="text" id="recurring-pattern" placeholder="e.g., Every Monday, Wednesday, Friday" class="block w-full px-4 py-2 text-sm rounded-lg border-2 border-purple-200 focus:border-purple-500 transition-all">
+                                            <p class="mt-1 text-xs text-gray-500">Describe when this event repeats (e.g., "Every Monday and Friday")</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div>
                             <label for="description" class="block text-base font-bold text-gray-700 mb-2">Description</label>
                             <textarea id="description" rows="4" placeholder="Additional details..." class="block w-full px-5 py-4 text-base rounded-xl border-2 border-gray-200 focus:border-indigo-500 transition-all resize-none"></textarea>

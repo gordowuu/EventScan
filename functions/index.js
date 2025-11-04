@@ -89,30 +89,37 @@ ENHANCED EXTRACTION RULES:
 4. If location is missing, confidence cannot be "high"
 5. Use current year (${new Date().getFullYear()}) if year not specified
 6. If only start time exists, estimate end_time as 2 hours later
+7. DATE PARSING - If only a day of week is mentioned (e.g., "Friday at 4pm") without a specific date:
+   - Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+   - Calculate the next occurrence of that day starting from today
+   - If the day is today and time hasn't passed, use today
+   - If the day is today but time has passed, use next week
+   - Otherwise, use the upcoming occurrence within the next 7 days
+   - Example: If today is Monday and poster says "Friday", use this coming Friday
 
 RECURRING EVENT DETECTION:
-7. Look for phrases like "Every [day]", "Weekly", "Monthly", "Daily", "[Day] at [time]"
-8. Set is_recurring to true if pattern is detected, describe the pattern clearly
-9. Parse frequency: daily, weekly, monthly, yearly, or custom for complex patterns
+8. Look for phrases like "Every [day]", "Weekly", "Monthly", "Daily", "[Day] at [time]"
+9. Set is_recurring to true if pattern is detected, describe the pattern clearly
+10. Parse frequency: daily, weekly, monthly, yearly, or custom for complex patterns
 
 REGISTRATION & PRICING:
-10. Extract any URLs for registration, tickets, RSVP, or "Learn More"
-11. Look for price mentions: "$10", "€5", "£20", "Free", "No charge", "Complimentary"
-12. Find registration deadlines: "Register by", "RSVP before", "Tickets until"
+11. Extract any URLs for registration, tickets, RSVP, or "Learn More"
+12. Look for price mentions: "$10", "€5", "£20", "Free", "No charge", "Complimentary"
+13. Find registration deadlines: "Register by", "RSVP before", "Tickets until"
 
 ORGANIZER INFORMATION:
-13. Identify hosting organization, club, company, or person's name
-14. Extract contact info: email addresses, phone numbers
-15. Find organizer websites or social media handles
+14. Identify hosting organization, club, company, or person's name
+15. Extract contact info: email addresses, phone numbers
+16. Find organizer websites or social media handles
 
 MULTI-LANGUAGE SUPPORT:
-16. Detect the primary language of the poster (English, Spanish, French, German, Chinese, Japanese, etc.)
-17. Parse dates in any format (MM/DD, DD/MM, YYYY-MM-DD, written months, etc.)
-18. Translate day names and months to standard format
-19. Handle time formats (12h/24h, AM/PM) from any language
+17. Detect the primary language of the poster (English, Spanish, French, German, Chinese, Japanese, etc.)
+18. Parse dates in any format (MM/DD, DD/MM, YYYY-MM-DD, written months, etc.)
+19. Translate day names and months to standard format
+20. Handle time formats (12h/24h, AM/PM) from any language
 
 GENERAL RULES:
-20. Confidence levels:
+21. Confidence levels:
    - Overall "confidence": Rate the entire extraction (high/medium/low)
    - "field_confidence": Rate EACH field individually based on clarity:
      * "high": Field is clearly visible and unambiguous
