@@ -37,7 +37,7 @@ exports.parseEventImage = onRequest(
       try {
         const genAI = new GoogleGenerativeAI(geminiApiKey.value());
         const model = genAI.getGenerativeModel({
-          model: "gemini-2.0-flash-exp", // Experimental model
+          model: "gemini-2.5-flash", // Stable model with better performance
         });
 
         const prompt = `
@@ -251,7 +251,7 @@ exports.parseEventText = onRequest(
       try {
         const genAI = new GoogleGenerativeAI(geminiApiKey.value());
         const model = genAI.getGenerativeModel({
-          model: "gemini-2.0-flash-exp",
+          model: "gemini-2.5-flash",
         });
 
         const prompt = `Extract event details from this text and return only valid JSON:
