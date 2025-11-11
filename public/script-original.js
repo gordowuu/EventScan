@@ -26,128 +26,165 @@ const functions = getFunctions(app, "us-central1");
 const parseEventImage = httpsCallable(functions, 'parseEventImage');
 const parseEventText = httpsCallable(functions, 'parseEventText'); // Deprecated fallback
 
-// --- DOM Element References (Experimental UI) ---
-let uploadForm, imageInput, retakeBtn, processBtn, imagePreview, dropZone, previewContainer;
-let processingScreen, processingMessage;
-let verificationScreen, posterImage, eventForm, titleInput, startTimeInput, endTimeInput;
-let locationInput, descriptionInput, backBtn, createGcalBtn;
-let recurringSection, isRecurringCheckbox, recurringOptions, recurringFrequency, recurringPattern;
+// --- DOM Element References ---
+const uploadForm = document.getElementById('upload-form');
+const imageInput = document.getElementById('image-input');
+const retakeBtn = document.getElementById('retake-btn');
+const processBtn = document.getElementById('process-btn');
+const imagePreview = document.getElementById('image-preview');
+const filePrompt = document.getElementById('file-prompt');
+const previewContainer = document.getElementById('preview-container');
+
+const processingScreen = document.getElementById('processing-screen');
+const processingMessage = document.getElementById('processing-message');
+
+const verificationScreen = document.getElementById('verification-screen');
+const posterImage = document.getElementById('poster-image');
+const eventForm = document.getElementById('event-form');
+const titleInput = document.getElementById('title');
+const startTimeInput = document.getElementById('start-time');
+const endTimeInput = document.getElementById('end-time');
+const locationInput = document.getElementById('location');
+const descriptionInput = document.getElementById('description');
+const backBtn = document.getElementById('back-btn');
+const createGcalBtn = document.getElementById('create-gcal-btn');
+
+// Recurring event fields
+const recurringSection = document.getElementById('recurring-section');
+const isRecurringCheckbox = document.getElementById('is-recurring');
+const recurringOptions = document.getElementById('recurring-options');
+const recurringFrequency = document.getElementById('recurring-frequency');
+const recurringPattern = document.getElementById('recurring-pattern');
 
 let currentImageBlob = null;
 let currentEventData = null; // Store event data with confidence info
 
+// --- Dark Mode Support ---
+const themeToggle = document.getElementById('theme-toggle');
+const sunIcon = document.getElementById('sun-icon');
+const moonIcon = document.getElementById('moon-icon');
+
+// Check for saved theme preference or default to system preference
+const savedTheme = localStorage.getItem('theme');
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+    document.body.classList.add('dark-mode');
+    sunIcon.classList.add('hidden');
+    moonIcon.classList.remove('hidden');
+}
+
+// Theme toggle handler
+themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    
+    sunIcon.classList.toggle('hidden', isDark);
+    moonIcon.classList.toggle('hidden', !isDark);
+    
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+});
+
+// Listen for system theme changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem('theme')) {
+        if (e.matches) {
+            document.body.classList.add('dark-mode');
+            sunIcon.classList.add('hidden');
+            moonIcon.classList.remove('hidden');
+        } else {
+            document.body.classList.remove('dark-mode');
+            sunIcon.classList.remove('hidden');
+            moonIcon.classList.add('hidden');
+        }
+    }
+});
+
 // --- App Initialization ---
 window.onload = () => {
-    // Get DOM elements after page loads
-    uploadForm = document.getElementById('upload-screen-exp');
-    imageInput = document.getElementById('image-input-exp');
-    retakeBtn = document.getElementById('retake-btn-exp');
-    processBtn = document.getElementById('process-btn-exp');
-    imagePreview = document.getElementById('image-preview-exp');
-    dropZone = document.getElementById('drop-zone-exp');
-    previewContainer = document.getElementById('preview-container-exp');
-
-    processingScreen = document.getElementById('processing-screen-exp');
-    processingMessage = document.getElementById('processing-message-exp');
-
-    verificationScreen = document.getElementById('verification-screen-exp');
-    posterImage = document.getElementById('poster-image-exp');
-    eventForm = document.getElementById('event-form-exp');
-    titleInput = document.getElementById('title-exp');
-    startTimeInput = document.getElementById('start-time-exp');
-    endTimeInput = document.getElementById('end-time-exp');
-    locationInput = document.getElementById('location-exp');
-    descriptionInput = document.getElementById('description-exp');
-    backBtn = document.getElementById('back-btn-exp');
-    createGcalBtn = document.getElementById('create-gcal-btn-exp');
-
-    // Recurring event fields
-    recurringSection = document.getElementById('recurring-section-exp');
-    isRecurringCheckbox = document.getElementById('is-recurring-exp');
-    recurringOptions = document.getElementById('recurring-options-exp');
-    recurringFrequency = document.getElementById('recurring-frequency-exp');
-    recurringPattern = document.getElementById('recurring-pattern-exp');
-
-    // --- Event Listeners ---
+    // Add file size validation to input
     imageInput.addEventListener('change', validateFileSize);
-    imageInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
+};
 
-    // Enhanced drag and drop with animations
-    dropZone.addEventListener('click', () => imageInput.click());
+// --- Event Listeners ---
 
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
+imageInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
 
-    dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-    });
+// Enhanced drag and drop
+filePrompt.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    filePrompt.classList.add('border-indigo-500', 'bg-indigo-50');
+    filePrompt.style.transform = 'scale(1.02)';
+});
 
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileSelect(files[0]);
-            showToast('📸 Image loaded successfully!', 'success');
-        }
-    });
+filePrompt.addEventListener('dragleave', (e) => {
+    filePrompt.classList.remove('border-indigo-500', 'bg-indigo-50');
+    filePrompt.style.transform = 'scale(1)';
+});
 
-    // Paste from clipboard support
-    document.addEventListener('paste', (e) => {
-        // Only handle paste when on upload screen
-        if (!uploadForm.classList.contains('hidden')) {
-            const items = e.clipboardData?.items;
-            if (items) {
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        const blob = items[i].getAsFile();
-                        handleFileSelect(blob);
-                        showSuccess('Image pasted from clipboard!');
-                        break;
-                    }
+filePrompt.addEventListener('drop', (e) => {
+    e.preventDefault();
+    filePrompt.classList.remove('border-indigo-500', 'bg-indigo-50');
+    filePrompt.style.transform = 'scale(1)';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFileSelect(files[0]);
+    }
+});
+
+// Paste from clipboard support
+document.addEventListener('paste', (e) => {
+    // Only handle paste when on upload screen
+    if (!uploadForm.classList.contains('hidden')) {
+        const items = e.clipboardData?.items;
+        if (items) {
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    handleFileSelect(blob);
+                    showSuccess('Image pasted from clipboard!');
+                    break;
                 }
             }
         }
-    });
+    }
+});
 
-    retakeBtn.addEventListener('click', () => {
-        imageInput.value = '';
-        currentImageBlob = null;
-        imagePreview.src = '#';
-        previewContainer.classList.add('hidden');
-        dropZone.classList.remove('hidden');
-    });
+retakeBtn.addEventListener('click', () => {
+    imageInput.value = '';
+    currentImageBlob = null;
+    imagePreview.src = '#';
+    previewContainer.classList.add('hidden');
+    filePrompt.classList.remove('hidden');
+});
 
-    processBtn.addEventListener('click', async () => {
-        if (!currentImageBlob) {
-            showError("Please select an image first.");
-            return;
-        }
+processBtn.addEventListener('click', async () => {
+    if (!currentImageBlob) {
+        showError("Please select an image first.");
+        return;
+    }
+    
+    uploadForm.classList.add('hidden');
+    processingScreen.classList.remove('hidden');
+
+    try {
+        // Detect QR codes first (fast operation)
+        processingMessage.textContent = '🔍 Scanning for QR codes...';
+        const qrUrls = await detectQRCodes(currentImageBlob);
         
-        uploadForm.classList.add('hidden');
-        processingScreen.classList.remove('hidden');
-
-        try {
-            // Detect QR codes first (fast operation)
-            processingMessage.textContent = '🔍 Scanning for QR codes...';
-            const qrUrls = await detectQRCodes(currentImageBlob);
-            
-            processingMessage.textContent = '📸 Enhancing & compressing image...';
-            const compressedImage = await compressImage(currentImageBlob);
-            
-            processingMessage.textContent = '🤖 Analyzing poster with AI...';
-            const imageData = await blobToBase64(compressedImage);
-            const mimeType = compressedImage.type;
-            
-            const result = await parseEventImage({ 
-                imageData: imageData.split(',')[1], // Remove data:image/jpeg;base64, prefix
-                mimeType 
-            });
-            
+        processingMessage.textContent = '📸 Enhancing & compressing image...';
+        const compressedImage = await compressImage(currentImageBlob);
+        
+        processingMessage.textContent = '🤖 Analyzing poster with AI...';
+        const imageData = await blobToBase64(compressedImage);
+        const mimeType = compressedImage.type;
+        
+        const result = await parseEventImage({ 
+            imageData: imageData.split(',')[1], // Remove data:image/jpeg;base64, prefix
+            mimeType 
+        });
+        
         currentEventData = result.data.eventData;
         
         // If QR code URL was detected and no registration URL exists, use QR code
@@ -177,6 +214,9 @@ window.onload = () => {
         processingScreen.classList.add('hidden');
         verificationScreen.classList.remove('hidden');
         
+        // Expand container for verification screen on desktop
+        document.getElementById('main-container').classList.add('verification-mode');
+        
         // Show confidence indicator
         showConfidenceIndicator(currentEventData.confidence);
         
@@ -193,27 +233,26 @@ window.onload = () => {
     }
 });
 
-    backBtn.addEventListener('click', () => {
-        verificationScreen.classList.add('hidden');
-        uploadForm.classList.remove('hidden');
-        
-        // Scroll to top of page
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        retakeBtn.click();
-    });
+backBtn.addEventListener('click', () => {
+    verificationScreen.classList.add('hidden');
+    uploadForm.classList.remove('hidden');
+    
+    // Restore small container for upload screen
+    document.getElementById('main-container').classList.remove('verification-mode');
+    
+    retakeBtn.click();
+});
 
-    createGcalBtn.addEventListener('click', showCalendarOptions);
+createGcalBtn.addEventListener('click', showCalendarOptions);
 
-    // Recurring event checkbox handler
-    isRecurringCheckbox.addEventListener('change', () => {
-        if (isRecurringCheckbox.checked) {
-            recurringOptions.classList.remove('hidden');
-        } else {
-            recurringOptions.classList.add('hidden');
-        }
-    });
-}; // End of window.onload
+// Recurring event checkbox handler
+isRecurringCheckbox.addEventListener('change', () => {
+    if (isRecurringCheckbox.checked) {
+        recurringOptions.classList.remove('hidden');
+    } else {
+        recurringOptions.classList.add('hidden');
+    }
+});
 
 // --- Core Functions ---
 
@@ -246,7 +285,7 @@ function handleFileSelect(file) {
     reader.onload = (event) => {
         imagePreview.src = event.target.result;
         posterImage.src = event.target.result;
-        dropZone.classList.add('hidden');
+        filePrompt.classList.add('hidden');
         previewContainer.classList.remove('hidden');
     };
     reader.readAsDataURL(file);
@@ -453,7 +492,7 @@ function addConfidenceIndicator(inputElement, confidence, fieldName) {
     
     // If no confidence data or high confidence, don't show indicator
     if (!confidence || confidence === 'high') {
-        inputElement.classList.remove('border-yellow-300', 'border-red-300', 'bg-yellow-900/20', 'bg-red-900/20');
+        inputElement.classList.remove('border-yellow-300', 'border-red-300', 'bg-yellow-50', 'bg-red-50');
         return;
     }
     
@@ -463,21 +502,21 @@ function addConfidenceIndicator(inputElement, confidence, fieldName) {
     
     if (confidence === 'medium') {
         badge.innerHTML = `
-            <div class="flex items-center gap-1 px-2 py-1 bg-yellow-500 border border-yellow-400 rounded-full text-xs font-semibold text-white shadow-sm">
+            <div class="flex items-center gap-1 px-2 py-1 bg-yellow-100 border border-yellow-300 rounded-full text-xs font-semibold text-yellow-800 shadow-sm">
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
                 <span>Verify</span>
             </div>
         `;
-        inputElement.classList.add('border-yellow-300', 'bg-yellow-900/20');
+        inputElement.classList.add('border-yellow-300', 'bg-yellow-50');
         inputElement.title = `Low confidence detected for ${fieldName}. Please double-check this field.`;
     } else if (confidence === 'low') {
         badge.innerHTML = `
-            <div class="flex items-center gap-1 px-2 py-1 bg-red-500 border border-red-400 rounded-full text-xs font-semibold text-white shadow-sm">
+            <div class="flex items-center gap-1 px-2 py-1 bg-red-100 border border-red-300 rounded-full text-xs font-semibold text-red-800 shadow-sm">
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
                 <span>Check!</span>
             </div>
         `;
-        inputElement.classList.add('border-red-300', 'bg-red-900/20');
+        inputElement.classList.add('border-red-300', 'bg-red-50');
         inputElement.title = `Very low confidence for ${fieldName}. Please review carefully.`;
     }
     
@@ -558,15 +597,15 @@ function showCalendarOptions() {
     ];
 
     modal.innerHTML = `
-        <div class="glass rounded-3xl shadow-2xl max-w-md w-full p-8 animate-scale-in border-2 border-purple-500/30">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-scale-in">
             <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl mb-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                 </div>
-                <h3 class="text-2xl font-bold text-white mb-2 neon-glow">Add to Calendar</h3>
-                <p class="text-sm text-purple-200">Choose your preferred calendar app</p>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Add to Calendar</h3>
+                <p class="text-sm text-gray-600">Choose your preferred calendar app</p>
             </div>
             
             <div class="space-y-3">
@@ -574,25 +613,25 @@ function showCalendarOptions() {
                     const isPreferred = provider.id === lastProvider;
                     return `
                     <button 
-                        class="calendar-provider-btn relative overflow-hidden w-full flex items-center gap-4 p-4 rounded-xl border-2 ${isPreferred ? 'border-purple-400 bg-purple-500/20' : 'border-purple-500/30 bg-transparent'} hover:border-purple-400 hover:shadow-lg transition-all duration-200 group ${isPreferred ? 'ring-2 ring-purple-400 ring-offset-2 ring-offset-transparent' : ''}"
+                        class="calendar-provider-btn relative overflow-hidden w-full flex items-center gap-4 p-4 rounded-xl border-2 ${isPreferred ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white'} hover:border-transparent hover:shadow-lg transition-all duration-200 group ${isPreferred ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}"
                         data-provider="${provider.id}"
                     >
-                        <div class="absolute inset-0 bg-gradient-to-r ${provider.color} opacity-0 group-hover:opacity-30 transition-opacity duration-200"></div>
-                        <div class="relative flex-shrink-0 w-12 h-12 rounded-xl ${isPreferred ? 'bg-purple-500/30' : 'bg-purple-900/30'} group-hover:bg-purple-500/40 flex items-center justify-center transition-colors">
+                        <div class="absolute inset-0 bg-gradient-to-r ${provider.color} opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                        <div class="relative flex-shrink-0 w-12 h-12 rounded-xl ${isPreferred ? 'bg-white' : 'bg-gray-50'} group-hover:bg-white/20 flex items-center justify-center transition-colors">
                             ${provider.icon}
                         </div>
                         <div class="relative flex-1 text-left">
-                            <p class="font-semibold ${isPreferred ? 'text-white' : 'text-purple-100'} group-hover:text-white transition-colors">${provider.name}</p>
-                            ${isPreferred ? '<p class="text-xs text-purple-300 group-hover:text-purple-200 transition-colors">Your preferred choice</p>' : ''}
+                            <p class="font-semibold ${isPreferred ? 'text-indigo-900' : 'text-gray-900'} group-hover:text-white transition-colors">${provider.name}</p>
+                            ${isPreferred ? '<p class="text-xs text-indigo-600 group-hover:text-white/80 transition-colors">Your preferred choice</p>' : ''}
                         </div>
-                        <svg class="relative w-5 h-5 ${isPreferred ? 'text-purple-300' : 'text-purple-400'} group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="relative w-5 h-5 ${isPreferred ? 'text-indigo-500' : 'text-gray-400'} group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                         </svg>
                     </button>
                 `}).join('')}
             </div>
             
-            <button class="mt-6 w-full px-6 py-3 glass border-2 border-purple-500/30 hover:border-purple-400 text-purple-100 rounded-xl font-semibold transition-colors" onclick="this.closest('.fixed').remove()">
+            <button class="mt-6 w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors" onclick="this.closest('.fixed').remove()">
                 Cancel
             </button>
         </div>
@@ -721,51 +760,31 @@ function handleCalendarAppRedirect(newWindow) {
                     <style>
                         * { margin: 0; padding: 0; box-sizing: border-box; }
                         body {
-                            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                            background: linear-gradient(135deg, #1a0b2e 0%, #16213e 50%, #0f0f23 100%);
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                             min-height: 100vh;
                             display: flex;
                             align-items: center;
                             justify-content: center;
                             padding: 20px;
-                            position: relative;
-                            overflow: hidden;
-                        }
-                        body::before {
-                            content: '';
-                            position: absolute;
-                            width: 200%;
-                            height: 200%;
-                            background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
-                            background-size: 50px 50px;
-                            animation: moveGrid 20s linear infinite;
-                        }
-                        @keyframes moveGrid {
-                            0% { transform: translate(0, 0); }
-                            100% { transform: translate(50px, 50px); }
                         }
                         .container {
-                            background: rgba(15, 23, 42, 0.7);
-                            backdrop-filter: blur(20px);
-                            border: 2px solid rgba(139, 92, 246, 0.3);
+                            background: white;
                             border-radius: 24px;
                             padding: 48px 32px;
                             max-width: 400px;
                             text-align: center;
-                            box-shadow: 0 25px 50px -12px rgba(139, 92, 246, 0.25);
-                            position: relative;
-                            z-index: 1;
+                            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                         }
                         .icon {
                             width: 80px;
                             height: 80px;
                             margin: 0 auto 24px;
-                            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                             border-radius: 50%;
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
                         }
                         .checkmark {
                             width: 40px;
@@ -784,18 +803,17 @@ function handleCalendarAppRedirect(newWindow) {
                         h1 {
                             font-size: 24px;
                             font-weight: 700;
-                            color: white;
+                            color: #1a202c;
                             margin-bottom: 12px;
-                            text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
                         }
                         p {
                             font-size: 16px;
-                            color: rgba(196, 181, 253, 0.8);
+                            color: #718096;
                             margin-bottom: 32px;
                             line-height: 1.6;
                         }
                         .close-btn {
-                            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                             color: white;
                             border: none;
                             padding: 16px 32px;
@@ -804,12 +822,11 @@ function handleCalendarAppRedirect(newWindow) {
                             font-weight: 600;
                             cursor: pointer;
                             width: 100%;
-                            transition: all 0.3s ease;
-                            box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+                            transition: transform 0.2s, box-shadow 0.2s;
                         }
                         .close-btn:hover {
                             transform: translateY(-2px);
-                            box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+                            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
                         }
                         .close-btn:active {
                             transform: translateY(0);
@@ -971,120 +988,141 @@ async function addToGoogleCalendar() {
  * Show error message to user with retry option
  */
 function showError(message, imageBlob = null) {
-    showToast(message, 'error');
+    // Haptic feedback on error
+    triggerHapticFeedback('error');
     
-    // If retryable, show retry button in a separate toast
+    // Create error notification
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'fixed top-4 right-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 max-w-md animate-slide-in border border-red-400';
+    errorDiv.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-lg">Error</p>
+                <p class="text-sm mt-1 text-white/90">${message}</p>
+                ${imageBlob ? `
+                    <button id="retry-btn" class="mt-3 px-4 py-2 bg-white text-red-600 rounded-lg font-semibold text-sm hover:bg-red-50 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Try Again
+                        </span>
+                    </button>
+                ` : ''}
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-white/70 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(errorDiv);
+    
+    // Add retry handler if image is available
     if (imageBlob) {
-        setTimeout(() => {
-            const container = document.getElementById('toast-container-exp');
-            const retryToast = document.createElement('div');
-            retryToast.className = 'glass border-2 border-purple-400 px-6 py-4 rounded-2xl shadow-2xl';
-            retryToast.innerHTML = `
-                <button id="retry-btn-toast" class="btn-futuristic w-full py-3 px-6 rounded-xl font-bold text-white relative z-10">
-                    🔄 Try Again
-                </button>
-            `;
-            container.appendChild(retryToast);
-            
-            document.getElementById('retry-btn-toast').onclick = async () => {
-                retryToast.remove();
+        const retryBtn = document.getElementById('retry-btn');
+        if (retryBtn) {
+            retryBtn.onclick = async () => {
+                errorDiv.remove();
+                // Keep the image and retry processing
                 currentImageBlob = imageBlob;
                 uploadForm.classList.add('hidden');
                 processingScreen.classList.remove('hidden');
                 
                 try {
-                    const qrUrls = await detectQRCodes(imageBlob);
-                    processingMessage.textContent = '� Enhancing & compressing image...';
+                    processingMessage.textContent = '🔄 Retrying...';
                     const compressedImage = await compressImage(imageBlob);
                     
                     processingMessage.textContent = '🤖 Analyzing poster with AI...';
                     const imageData = await blobToBase64(compressedImage);
+                    const mimeType = compressedImage.type;
+                    
                     const result = await parseEventImage({ 
                         imageData: imageData.split(',')[1],
-                        mimeType: compressedImage.type
+                        mimeType 
                     });
                     
                     currentEventData = result.data.eventData;
-                    if (qrUrls.length > 0 && !currentEventData.registration?.url) {
-                        if (!currentEventData.registration) currentEventData.registration = {};
-                        currentEventData.registration.url = qrUrls[0];
-                        showToast('📱 QR code detected!', 'success');
+                    
+                    if (result.data.warning) {
+                        showWarning(result.data.warning);
                     }
                     
+                    if (currentEventData.warnings && currentEventData.warnings.length > 0) {
+                        showWarning(currentEventData.warnings.join('. '));
+                    }
+
                     populateVerificationForm(currentEventData);
                     processingScreen.classList.add('hidden');
                     verificationScreen.classList.remove('hidden');
+                    document.getElementById('main-container').classList.add('verification-mode');
                     showConfidenceIndicator(currentEventData.confidence);
-                } catch (retryError) {
-                    handleProcessingError(retryError);
+                    
+                } catch (error) {
+                    console.error("Retry failed:", error);
+                    handleProcessingError(error, imageBlob);
+                    processingScreen.classList.add('hidden');
+                    uploadForm.classList.remove('hidden');
                 }
             };
-        }, 500);
+        }
     }
+    
+    setTimeout(() => errorDiv.remove(), 8000);
 }
 
 /**
  * Show warning message to user
  */
 function showWarning(message) {
-    showToast(message, 'warning');
-}
-
-/**
- * Show modern toast notification
- */
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container-exp');
+    // Haptic feedback on warning
+    triggerHapticFeedback('warning');
     
-    const colors = {
-        success: 'from-green-500 to-emerald-500 border-green-400',
-        error: 'from-red-500 to-pink-500 border-red-400',
-        warning: 'from-yellow-500 to-orange-500 border-yellow-400',
-        info: 'from-blue-500 to-cyan-500 border-blue-400'
-    };
-    
-    const icons = {
-        success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
-        error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
-        warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>',
-        info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
-    };
-    
-    const toast = document.createElement('div');
-    toast.className = `glass border-2 ${colors[type]} px-6 py-4 rounded-2xl shadow-2xl transform transition-all duration-500 ease-out translate-x-0 opacity-100`;
-    toast.style.animation = 'fadeInUp 0.5s ease-out';
-    
-    toast.innerHTML = `
-        <div class="flex items-center gap-3">
-            <svg class="w-6 h-6 text-white flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                ${icons[type]}
-            </svg>
-            <p class="text-white font-medium">${message}</p>
-            <button onclick="this.closest('div').remove()" class="ml-2 text-white/70 hover:text-white transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'fixed top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 px-6 py-4 rounded-2xl shadow-2xl z-50 max-w-md animate-slide-in border border-yellow-300';
+    warningDiv.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-10 h-10 bg-white/30 rounded-full flex items-center justify-center mr-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-lg">Please Verify</p>
+                <p class="text-sm mt-1">${message}</p>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 hover:text-gray-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
     `;
-    
-    container.appendChild(toast);
-    
-    // Auto remove after 4 seconds
-    setTimeout(() => {
-        toast.style.animation = 'fadeInUp 0.5s ease-out reverse';
-        setTimeout(() => toast.remove(), 500);
-    }, 4000);
-    
-    // Haptic feedback
-    triggerHapticFeedback(type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'light');
+    document.body.appendChild(warningDiv);
+    setTimeout(() => warningDiv.remove(), 7000);
 }
 
 /**
  * Show success message to user with haptic feedback
  */
 function showSuccess(message) {
-    showToast(message, 'success');
+    // Haptic feedback on success
+    triggerHapticFeedback('success');
+    
+    const successDiv = document.createElement('div');
+    successDiv.className = 'fixed top-4 right-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 max-w-md animate-slide-in border border-green-400';
+    successDiv.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-lg">Success!</p>
+                <p class="text-sm mt-1 text-white/90">${message}</p>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-white/70 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(successDiv);
+    setTimeout(() => successDiv.remove(), 4000);
 }
 
 /**
@@ -1152,26 +1190,25 @@ function handleProcessingError(error, imageBlob = null) {
  * Show confidence indicator
  */
 function showConfidenceIndicator(confidence) {
-    const indicator = document.getElementById('confidence-indicator-exp');
-    if (indicator) {
-        // Clear any existing confidence indicators
-        indicator.innerHTML = '';
-        
+    const indicator = document.getElementById('confidence-indicator');
+    if (!indicator) {
+        // Create indicator if it doesn't exist
         const indicatorDiv = document.createElement('div');
-        indicatorDiv.className = 'glass rounded-2xl p-6 border-2 fade-in-up';
+        indicatorDiv.id = 'confidence-indicator';
+        indicatorDiv.className = 'mb-6 p-4 rounded-2xl border-2';
         
         if (confidence === 'high') {
-            indicatorDiv.className += ' border-green-400';
-            indicatorDiv.innerHTML = '<div class="flex items-center gap-4"><div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div><div><p class="font-bold text-lg text-green-300">High Confidence ✨</p><p class="text-sm text-purple-200 mt-1">All details were clearly extracted from the poster</p></div></div>';
+            indicatorDiv.className += ' bg-gradient-to-r from-green-50 to-emerald-50 border-green-300';
+            indicatorDiv.innerHTML = '<div class="flex items-center gap-3"><div class="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center"><svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div><div><p class="text-sm font-bold text-green-900">High Confidence</p><p class="text-xs text-green-700">All details were clearly extracted</p></div></div>';
         } else if (confidence === 'medium') {
-            indicatorDiv.className += ' border-yellow-400';
-            indicatorDiv.innerHTML = '<div class="flex items-center gap-4"><div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></div><div><p class="font-bold text-lg text-yellow-300">Medium Confidence ⚠️</p><p class="text-sm text-purple-200 mt-1">Please double-check the details below</p></div></div>';
+            indicatorDiv.className += ' bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300';
+            indicatorDiv.innerHTML = '<div class="flex items-center gap-3"><div class="flex-shrink-0 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center"><svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></div><div><p class="text-sm font-bold text-yellow-900">Medium Confidence</p><p class="text-xs text-yellow-700">Please double-check the details below</p></div></div>';
         } else {
-            indicatorDiv.className += ' border-red-400';
-            indicatorDiv.innerHTML = '<div class="flex items-center gap-4"><div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-red-400 to-pink-500 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg></div><div><p class="font-bold text-lg text-red-300">Low Confidence ⚡</p><p class="text-sm text-purple-200 mt-1">We had trouble reading this poster. Please verify carefully</p></div></div>';
+            indicatorDiv.className += ' bg-gradient-to-r from-red-50 to-pink-50 border-red-300';
+            indicatorDiv.innerHTML = '<div class="flex items-center gap-3"><div class="flex-shrink-0 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"><svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg></div><div><p class="text-sm font-bold text-red-900">Low Confidence</p><p class="text-xs text-red-700">We had trouble reading this poster. Please verify carefully</p></div></div>';
         }
         
-        indicator.appendChild(indicatorDiv);
+        eventForm.insertBefore(indicatorDiv, eventForm.firstChild);
     }
 }
 

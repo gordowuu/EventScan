@@ -5,8 +5,7 @@
 Before deploying, ensure you have completed:
 
 - [ ] Firebase project created with Blaze plan enabled
-- [ ] Gemini API key obtained from [Google AI Studio](https://makersuite.google.com/app/apikey)
-- [ ] Google Cloud OAuth Client ID created
+- [ ] Gemini API key obtained from [Google AI Studio](https://aistudio.google.com/app/apikey)
 - [ ] Firebase CLI installed: `npm install -g firebase-tools`
 - [ ] Logged into Firebase: `firebase login`
 
@@ -29,7 +28,7 @@ firebase functions:secrets:access GEMINI_API_KEY
 
 #### Update `public/script.js`:
 
-Replace these values with your own:
+Replace the Firebase config with your own:
 
 ```javascript
 // Your Firebase config from Firebase Console
@@ -42,46 +41,27 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID",
   measurementId: "YOUR_MEASUREMENT_ID"
 };
-
-// Your OAuth Client ID from Google Cloud Console
-const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
 ```
 
 **Where to find these:**
 - Firebase config: [Firebase Console](https://console.firebase.google.com/) → Project Settings → General → Your apps → Web app
-- OAuth Client ID: [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 
-### 3. Configure OAuth (Required for Calendar Access)
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-2. Select your project (or create one)
-3. Click "Create Credentials" → "OAuth Client ID"
-4. Choose "Web application"
-5. Add Authorized JavaScript origins:
-   - `https://YOUR_PROJECT.web.app`
-   - `https://YOUR_PROJECT.firebaseapp.com`
-   - `http://localhost:5000` (for testing)
-6. Add Authorized redirect URIs:
-   - `https://YOUR_PROJECT.web.app`
-   - `https://YOUR_PROJECT.firebaseapp.com`
-7. Copy the Client ID to `public/script.js`
-
-### 4. Enable Required APIs
+### 3. Enable Required APIs
 
 In [Google Cloud Console](https://console.cloud.google.com/apis/library):
 
-- [x] Google Calendar API
 - [x] Generative Language API (Gemini)
 - [x] Cloud Functions API
 
 ```bash
 # Or enable via CLI
-gcloud services enable calendar-json.googleapis.com
 gcloud services enable generativelanguage.googleapis.com
 gcloud services enable cloudfunctions.googleapis.com
 ```
 
-### 5. Deploy Firebase Functions
+**Note:** Calendar API is not required - EventSnap uses standard calendar links (no OAuth needed!)
+
+### 4. Deploy Firebase Functions
 
 ```bash
 # Deploy only functions (recommended for first deployment)
@@ -100,7 +80,6 @@ firebase deploy --only functions
 
 Functions:
   parseEventImage(us-central1): https://us-central1-YOUR_PROJECT.cloudfunctions.net/parseEventImage
-  parseEventText(us-central1): https://us-central1-YOUR_PROJECT.cloudfunctions.net/parseEventText
 ```
 
 ### 6. Deploy Hosting
@@ -238,8 +217,9 @@ The function already has `cors: true`. If you still see errors:
 
 **Solution:**
 1. Verify Gemini API key is set: `firebase functions:secrets:access GEMINI_API_KEY`
-2. Check that Calendar API is enabled in Cloud Console
-3. Verify OAuth Client ID is correct
+1. Check Firebase function logs: `firebase functions:log`
+2. Check that Generative Language API (Gemini) is enabled in Cloud Console
+3. Verify Gemini API key is set correctly in Firebase secrets
 
 ### Issue: "Function Timeout"
 
@@ -400,14 +380,14 @@ jobs:
 
 **Quarterly:**
 - [ ] Review security rules
-- [ ] Audit OAuth permissions
+- [ ] Review API usage and costs
 - [ ] Update documentation
 
 ## Resources
 
 - [Firebase Documentation](https://firebase.google.com/docs)
 - [Gemini API Docs](https://ai.google.dev/docs)
-- [Google Calendar API](https://developers.google.com/calendar)
+- [Calendar Links Documentation](https://developers.google.com/calendar/api/guides/create-events#calendar-links)
 - [Firebase Functions Logs](https://console.firebase.google.com/project/_/functions/logs)
 - [Cloud Console](https://console.cloud.google.com/)
 

@@ -4,37 +4,38 @@ Transform event posters into calendar events instantly using AI vision technolog
 
 ![EventSnap Demo](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Firebase](https://img.shields.io/badge/Firebase-v10-orange)
-![Gemini](https://img.shields.io/badge/Gemini-2.0%20Flash-blue)
+![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## ✨ Features
 
 ### Core Functionality
-- 🤖 **AI Vision Processing** - Google's Gemini 2.0 Flash for advanced image understanding
-- 📅 **Multi-Calendar Support** - Export to Google, Apple, Outlook, Yahoo calendars
+- 🤖 **AI Vision Processing** - Google's Gemini 2.5 Flash for advanced image understanding
+- 📅 **Multi-Calendar Support** - Export to Google, Apple, Outlook calendars
 - 🚀 **No OAuth Required** - Industry-standard calendar links, no verification needed
-- 📱 **Mobile Optimized** - PWA-ready with offline support
+- 📱 **Mobile Optimized** - PWA-ready with responsive design and mobile-first approach
 - ⚡ **Fast & Efficient** - Automatic image compression and optimization
 - 🔒 **Privacy First** - No data storage, client-side processing
 
 ### Smart Features
 - 💪 **Advanced Extraction** - Detects title, date, time, location, description
-- � **Recurring Events** - Identifies repeat patterns
+- 🔁 **Recurring Events** - Identifies and configures repeat patterns with RRULE support
 - 🎟️ **Registration Info** - Extracts URLs, prices, deadlines
 - 👤 **Organizer Details** - Captures contact info and websites
 - 🌍 **Multi-Language** - Supports events in any language
-- ⚠️ **Confidence Scoring** - Know when to verify extracted details
+- ⚠️ **Confidence Scoring** - Visual field-level indicators show extraction reliability
 
 ### User Experience
-- 🎨 **Beautiful UI** - Modern glassmorphism design with dark mode
+- 🎨 **Futuristic Dark UI** - Beautiful glassmorphism design with purple/pink gradient theme
+- ✨ **Animated Background** - Particle.js effects and neon glow elements
 - 📋 **Drag & Drop** - Upload by dragging files
 - 📎 **Paste Support** - Paste images directly from clipboard
-- � **Camera Support** - Take photos directly on mobile devices
-- �🔄 **Auto-Update** - Automatic app updates without cache clearing
+- 📸 **Smart Camera Access** - Choose between camera, gallery, or files on mobile
+- 🔄 **Auto-Update** - Automatic app updates without cache clearing
 - 💾 **Smart Preferences** - Remembers your calendar choice
 - 🔁 **Error Recovery** - Retry failed extractions with one click
-- 📳 **Haptic Feedback** - Tactile feedback for actions on mobile
-- 🎯 **Field Confidence** - Visual indicators for uncertain fields
+- 🎯 **Field Confidence** - Yellow/red badges for uncertain fields with dark-themed indicators
+- � **Permanently Dark** - Optimized dark theme for reduced eye strain
 - ♿ **Accessible** - WCAG AA compliant
 
 ## 🚀 Quick Start
@@ -145,18 +146,21 @@ No other environment variables needed!
 ```
 eventsnap/
 ├── functions/              # Firebase Cloud Functions
-│   ├── index.js           # AI processing with Gemini 2.0 Flash
+│   ├── index.js           # AI processing with Gemini 2.5 Flash
 │   └── package.json       # Function dependencies
 ├── public/                # Static web files
-│   ├── index.html         # Main app UI (glassmorphism design)
+│   ├── index.html         # Main app UI (futuristic dark glassmorphism design)
 │   ├── script.js          # Client-side logic & calendar integration
 │   ├── sw.js              # Service Worker for PWA & auto-updates
 │   ├── manifest.json      # PWA manifest
 │   ├── privacy.html       # Privacy Policy
 │   ├── terms.html         # Terms of Service
+│   ├── index-original.html # Original UI backup
+│   ├── script-original.js  # Original script backup
 │   └── icons/             # PWA icons (144x144, 192x192, 512x512)
 ├── firebase.json          # Firebase config with cache headers
 ├── SECURITY.md            # Security guidelines
+├── EXPERIMENTAL_REVIEW.md # UI redesign documentation
 └── README.md              # You are here
 ```
 
@@ -223,6 +227,38 @@ firebase deploy
 - ✅ Invalid file type → Should reject immediately
 
 ## 📊 Recent Updates
+
+### Version 4.0 (November 2025) 🎨 **Major UI/UX Redesign**
+
+**Complete Visual Overhaul**
+- 🎨 **Futuristic Dark Theme** - Stunning purple/pink gradient color scheme
+- ✨ **Particle Effects** - Animated background with particle.js integration
+- 💎 **Enhanced Glassmorphism** - Darker glass effects with neon borders
+- 🌈 **Holographic Text** - White-to-cyan gradient for maximum visibility
+- 🎯 **3D Card Effects** - Depth and hover animations throughout
+- 🔮 **Neon Glow** - Subtle glow effects on key elements
+- 📱 **Mobile-First Redesign** - Optimized layouts and touch interactions
+
+**Improved User Flow**
+- 📸 **Better Image Positioning** - Poster appears above form on mobile for easy reference
+- 🕐 **Fixed DateTime Inputs** - No more overflow on mobile screens
+- 🎨 **Themed Success Page** - Calendar opened page matches dark design
+- 🔗 **GitHub Integration** - Direct link to repository in footer
+- ⬆️ **Smart Scrolling** - Auto-scroll to top when navigating back
+- 🎯 **Centered Layouts** - All form elements properly aligned
+
+**UI Refinements**
+- 🎨 **Dark Confidence Indicators** - Yellow/red badges with dark backgrounds for readability
+- 📅 **Inverted Calendar Icons** - White datetime picker icons for visibility
+- 🌑 **Dark Mode Only** - Removed toggle for consistent experience
+- 💜 **Unified Theme** - Calendar modal matches main site design
+- 📝 **Visible Text Gradients** - All text uses high-contrast holographic effects
+
+**Technical Improvements**
+- ⚡ **Proper DOM Loading** - Fixed click handlers with window.onload
+- 🔧 **Removed Capture Attribute** - Mobile users can choose upload method
+- 📱 **Responsive Grid** - DateTime inputs stack on mobile, side-by-side on desktop
+- 🎨 **CSS Optimizations** - Improved glass effects and animations
 
 ### Version 3.1 (October 31, 2025) 🎃
 
@@ -325,28 +361,32 @@ This project is licensed under the MIT License.
 ## 🗺️ Roadmap
 
 ### Completed ✅
-- ✅ Multi-calendar support (Google, Apple, Outlook, Yahoo)
-- ✅ Dark mode with toggle
-- ✅ Recurring event detection
+- ✅ Multi-calendar support (Google, Apple, Outlook)
+- ✅ Futuristic dark theme with particle effects
+- ✅ Recurring event detection with RRULE support
 - ✅ Multi-language support
 - ✅ PWA capabilities with offline support
 - ✅ Auto-update system
 - ✅ Drag & drop + paste support
 - ✅ Calendar preference persistence
 - ✅ Error recovery with retry
-- ✅ Haptic feedback
-- ✅ Field-level confidence indicators
-- ✅ Mobile camera support
+- ✅ Field-level confidence indicators with dark theme
+- ✅ Mobile-optimized camera/file selection
+- ✅ Responsive layouts for all screen sizes
+- ✅ GitHub repository link in footer
+- ✅ Themed success pages
+- ✅ Smart scroll-to-top navigation
 
 ### Planned 📋
 - [ ] Batch processing for multiple posters
-- [ ] More calendar providers (iCloud, Office 365)
 - [ ] Event reminder customization
 - [ ] Export to ICS with all metadata
-- [ ] Image cropping before processing
+- [ ] Image cropping/editing before processing
 - [ ] Browser extension
 - [ ] Mobile app (React Native)
 - [ ] API for third-party integrations
+- [ ] Dark/light theme toggle (currently dark only)
+- [ ] Custom color scheme options
 
 ---
 
