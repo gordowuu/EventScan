@@ -1,28 +1,28 @@
-// Service Worker for EventSnap PWA with auto-update capability
-// Update this version number whenever you deploy changes
-const CACHE_VERSION = 'eventsnap-v3.1.0-' + new Date().getTime();
+// Service Worker for EventSnap PWA v5.1
+// Auto-update capable with network-first strategy
+
+const CACHE_VERSION = 'eventsnap-v5.1.0-' + Date.now();
 const CACHE_NAME = CACHE_VERSION;
 
-// Files to cache for offline functionality
-const urlsToCache = [
+// Core files to cache for offline functionality
+const CORE_ASSETS = [
   '/',
   '/index.html',
-  '/script.js',
   '/manifest.json',
   '/privacy.html',
   '/terms.html'
 ];
 
-// Install event - cache resources
+// Install event - cache core resources
 self.addEventListener('install', event => {
   console.log('[SW] Installing Service Worker...', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[SW] Caching app shell');
-        return cache.addAll(urlsToCache);
+        console.log('[SW] Caching core assets');
+        return cache.addAll(CORE_ASSETS);
       })
-      .then(() => self.skipWaiting()) // Activate immediately
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -39,7 +39,7 @@ self.addEventListener('activate', event => {
           }
         })
       );
-    }).then(() => self.clients.claim()) // Take control immediately
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -50,11 +50,15 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Skip Firebase and Google API requests
+  const url = new URL(event.request.url);
+
+  // Skip Firebase and external API requests
   if (
-    event.request.url.includes('firebasestorage.googleapis.com') ||
-    event.request.url.includes('googleapis.com') ||
-    event.request.url.includes('gstatic.com')
+    url.hostname.includes('firebasestorage.googleapis.com') ||
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('gstatic.com') ||
+    url.hostname.includes('fonts.googleapis.com') ||
+    url.hostname.includes('fonts.gstatic.com')
   ) {
     return;
   }
@@ -86,7 +90,13 @@ self.addEventListener('fetch', event => {
               console.log('[SW] Serving from cache:', event.request.url);
               return response;
             }
-            // If not in cache either, return offline page or error
+
+            // If HTML request and not in cache, return index.html for SPA routing
+            if (event.request.headers.get('accept')?.includes('text/html')) {
+              return caches.match('/index.html');
+            }
+
+            // Return offline error
             return new Response('Offline - content not available', {
               status: 503,
               statusText: 'Service Unavailable',
@@ -97,6 +107,36 @@ self.addEventListener('fetch', event => {
           });
       })
   );
+});
+
+// Handle share target
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // Handle share target POST requests
+  if (event.request.method === 'POST' && url.pathname === '/') {
+    event.respondWith(
+      (async () => {
+        const formData = await event.request.formData();
+        const files = formData.getAll('image');
+
+        // Store files in IndexedDB or pass to client
+        if (files.length > 0) {
+          // Redirect to the main page with a flag
+          const client = await self.clients.get(event.resultingClientId);
+          if (client) {
+            client.postMessage({
+              type: 'SHARE_TARGET',
+              files: files
+            });
+          }
+        }
+
+        // Return the main page
+        return Response.redirect('/?shared=true', 303);
+      })()
+    );
+  }
 });
 
 // Listen for messages from the client

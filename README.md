@@ -3,6 +3,8 @@
 Transform event posters into calendar events instantly using AI vision technology. No OAuth verification needed!
 
 ![EventSnap Demo](https://img.shields.io/badge/Status-Production%20Ready-success)
+![Vite](https://img.shields.io/badge/Vite-7.x-646CFF)
+![Tailwind](https://img.shields.io/badge/Tailwind-4.x-38B2AC)
 ![Firebase](https://img.shields.io/badge/Firebase-v10-orange)
 ![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -11,11 +13,12 @@ Transform event posters into calendar events instantly using AI vision technolog
 
 ### Core Functionality
 - 🤖 **AI Vision Processing** - Google's Gemini 2.5 Flash for advanced image understanding
-- 📅 **Multi-Calendar Support** - Export to Google, Apple, Outlook calendars
+- 📅 **Multi-Calendar Support** - Export to Google, Apple, Outlook, Yahoo calendars
 - 🚀 **No OAuth Required** - Industry-standard calendar links, no verification needed
 - 📱 **Mobile Optimized** - PWA-ready with responsive design and mobile-first approach
 - ⚡ **Fast & Efficient** - Automatic image compression and optimization
 - 🔒 **Privacy First** - No data storage, client-side processing
+- 📦 **Batch Processing** - Process multiple event posters at once
 
 ### Smart Features
 - 💪 **Advanced Extraction** - Detects title, date, time, location, description
@@ -24,19 +27,19 @@ Transform event posters into calendar events instantly using AI vision technolog
 - 👤 **Organizer Details** - Captures contact info and websites
 - 🌍 **Multi-Language** - Supports events in any language
 - ⚠️ **Confidence Scoring** - Visual field-level indicators show extraction reliability
+- 📱 **QR Code Detection** - Automatically scans QR codes in posters
 
 ### User Experience
 - 🎨 **Futuristic Dark UI** - Beautiful glassmorphism design with purple/pink gradient theme
-- ✨ **Animated Background** - Particle.js effects and neon glow elements
+- ✨ **Smooth Animations** - Subtle, non-distracting animated effects
 - 📋 **Drag & Drop** - Upload by dragging files
 - 📎 **Paste Support** - Paste images directly from clipboard
 - 📸 **Smart Camera Access** - Choose between camera, gallery, or files on mobile
 - 🔄 **Auto-Update** - Automatic app updates without cache clearing
 - 💾 **Smart Preferences** - Remembers your calendar choice
 - 🔁 **Error Recovery** - Retry failed extractions with one click
-- 🎯 **Field Confidence** - Yellow/red badges for uncertain fields with dark-themed indicators
-- � **Permanently Dark** - Optimized dark theme for reduced eye strain
-- ♿ **Accessible** - WCAG AA compliant
+- 🔍 **Image Lightbox** - Click to enlarge poster for detail review
+- 🏠 **Easy Navigation** - Click logo to return home anytime
 
 ## 🚀 Quick Start
 
@@ -51,15 +54,14 @@ Transform event posters into calendar events instantly using AI vision technolog
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/gordowuu/EventScan.git
-   cd EventScan
+   git clone https://github.com/gordowuu/EventSnap.git
+   cd EventSnap
    ```
 
 2. **Install dependencies**
    ```bash
-   cd functions
    npm install
-   cd ..
+   cd functions && npm install && cd ..
    ```
 
 3. **Set up Firebase**
@@ -74,234 +76,144 @@ Transform event posters into calendar events instantly using AI vision technolog
    firebase functions:secrets:set GEMINI_API_KEY
    ```
 
-5. **Update Firebase configuration**
-   - Open `public/script.js`
-   - Replace the `firebaseConfig` object with your project's config
-
-6. **Deploy**
+5. **Development**
    ```bash
-   firebase deploy
+   npm run dev
    ```
 
-## 🔧 Configuration
+6. **Build & Deploy**
+   ```bash
+   npm run deploy
+   ```
 
-### Firebase Setup
+## 🔧 Tech Stack
 
-1. **Enable required services:**
-   - Firebase Hosting
-   - Cloud Functions (Node.js 20, Gen 2)
-   - Secret Manager (for API keys)
-   - (Optional) Firebase Analytics
+### Frontend (Vite + Modern JS)
+- **Vite 7** - Lightning-fast build tool
+- **Tailwind CSS 4** - Utility-first CSS with @tailwindcss/vite plugin
+- **ES Modules** - Modern JavaScript architecture
+- **PWA** - Service worker for offline support
 
-2. **Configure Function:**
-   - Region: us-central1
-   - Memory: 512MB
-   - Timeout: 60s
-   - Runtime: Node.js 20
+### Backend (Firebase)
+- **Cloud Functions** - Node.js 20, Gen 2
+- **Hosting** - Global CDN with cache headers
+- **Secret Manager** - Secure API key storage
 
-3. **Security:**
-   - API keys stored in Firebase Secret Manager
-   - No OAuth verification needed (using calendar links)
-   - HTTPS-only hosting with proper cache headers
+### AI
+- **Google Gemini 2.5 Flash** - Multimodal vision processing
 
-### API Configuration
+## 🏗️ Project Structure
 
-Set up your Gemini API key as a Firebase secret:
-
-```bash
-# Get API key from Google AI Studio
-firebase functions:secrets:set GEMINI_API_KEY
-
-# Enter your key when prompted
 ```
-
-No other environment variables needed!
+eventsnap/
+├── src/                    # Source files (Vite)
+│   ├── main.js            # App entry point
+│   ├── styles/            # CSS files
+│   │   ├── main.css       # Core styles + Tailwind
+│   │   └── animations.css # Animation keyframes
+│   ├── modules/           # ES modules
+│   │   ├── config.js      # Firebase & app config
+│   │   ├── image-processor.js
+│   │   ├── calendar-providers.js
+│   │   ├── batch-processor.js
+│   │   ├── qr-detector.js
+│   │   ├── ui.js
+│   │   ├── share.js
+│   │   ├── export.js
+│   │   └── particles-manager.js
+│   └── lib/               # Third-party libs
+│       └── particles.min.js
+├── public/                # Static assets
+│   ├── icons/            # PWA icons
+│   ├── manifest.json     # PWA manifest
+│   ├── sw.js             # Service worker
+│   ├── privacy.html      # Privacy policy
+│   ├── terms.html        # Terms of service
+│   └── 404.html          # Error page
+├── functions/            # Firebase Cloud Functions
+│   ├── index.js          # AI processing with Gemini
+│   └── package.json
+├── index.html            # Main HTML (Vite entry)
+├── vite.config.js        # Vite configuration
+├── package.json          # Dependencies
+├── firebase.json         # Firebase config
+└── README.md
+```
 
 ## 📖 Usage
 
 1. **Visit** [event-snap.web.app](https://event-snap.web.app)
 2. **Upload an event poster**
    - Click to browse, drag & drop, or paste from clipboard
+   - Select multiple images for batch processing
    - Supports JPG/PNG, up to 4MB
 3. **Review extracted details**
    - AI extracts title, date, time, location, and more
-   - Confidence indicator shows extraction quality
+   - Click image to enlarge for reference
+   - Confidence indicators show extraction quality
 4. **Edit if needed** - Adjust any details
 5. **Add to Calendar**
-   - Choose from 4 calendar providers (Google, Apple, Outlook, Yahoo)
+   - Choose from 4 calendar providers
    - Event opens pre-filled in your calendar
-   - Click "Save" to add
-
-### Tips for Best Results
-
-- ✅ Use clear, well-lit photos
-- ✅ Ensure text is readable
-- ✅ Center the poster in the frame
-- ✅ Avoid shadows and glare
-- ❌ Don't use extremely low resolution images
-- ❌ Avoid images with too much background clutter
-
-## 🏗️ Project Structure
-
-```
-eventsnap/
-├── functions/              # Firebase Cloud Functions
-│   ├── index.js           # AI processing with Gemini 2.5 Flash
-│   └── package.json       # Function dependencies
-├── public/                # Static web files
-│   ├── index.html         # Main app UI (futuristic dark glassmorphism design)
-│   ├── script.js          # Client-side logic & calendar integration
-│   ├── sw.js              # Service Worker for PWA & auto-updates
-│   ├── manifest.json      # PWA manifest
-│   ├── privacy.html       # Privacy Policy
-│   ├── terms.html         # Terms of Service
-│   ├── index-original.html # Original UI backup
-│   ├── script-original.js  # Original script backup
-│   └── icons/             # PWA icons (144x144, 192x192, 512x512)
-├── firebase.json          # Firebase config with cache headers
-├── SECURITY.md            # Security guidelines
-├── EXPERIMENTAL_REVIEW.md # UI redesign documentation
-└── README.md              # You are here
-```
 
 ## 🔒 Security & Privacy
 
-### Security Measures
-- ✅ Input validation (file type, size limits)
-- ✅ Automatic image compression before upload
-- ✅ Server-side API key management (Firebase Secret Manager)
-- ✅ Comprehensive error handling
-- ✅ HTTPS-only hosting
-- ✅ No OAuth permissions required
+- ✅ **No Data Storage** - Images and event data are NOT stored
+- ✅ **No User Accounts** - No sign-up or login required
+- ✅ **No Tracking** - Minimal analytics, no personal data collection
+- ✅ **Client-Side Processing** - Image compression in browser
+- ✅ **HTTPS Only** - All connections encrypted
+- ✅ **API Keys Secured** - Stored in Firebase Secret Manager
 
-### Privacy Features
-- 🔒 **No Data Storage** - Images and event data are NOT stored
-- 🔒 **No User Accounts** - No sign-up or login required
-- 🔒 **No Tracking** - Minimal analytics, no personal data collection
-- 🔒 **Client-Side Processing** - Image compression happens in your browser
-- 🔒 **Temporary Processing** - Server processes images in memory only
-
-**See `SECURITY.md` for detailed security guidelines.**
-
-## 💰 Cost Estimates
-
-Based on Gemini 2.0 Flash pricing (October 2025):
-
-### API Costs
-- **Input**: $0.075 per 1M tokens (~$0.000125 per image)
-- **Output**: $0.30 per 1M tokens (~$0.000045 per image)
-- **Total per image**: ~$0.00017 - $0.00032
-
-### Firebase Costs
-- **Functions**: Free tier covers 2M invocations/month
-- **Hosting**: Free tier covers 10GB/month transfer
-- **Bandwidth**: Free tier covers 360MB/day
-
-### Real-World Examples
-- **100 images/month**: $0.02 (essentially free)
-- **1,000 images/month**: $0.17 - $0.32
-- **10,000 images/month**: $1.70 - $3.20
-- **100,000 images/month**: $17 - $32
-
-**Free tier covers ~15,000 images per month!** 🎉
-
-## 🧪 Testing
-
-### Manual Testing
-
-```bash
-# Start local emulator
-firebase emulators:start
-
-# Deploy to staging
-firebase use staging
-firebase deploy
-```
-
-### Test Cases
-
-- ✅ Clear event poster → Should extract all details with high confidence
-- ✅ Blurry image → Should show warning but still attempt extraction
-- ✅ Non-event image → Should handle gracefully with low confidence
-- ✅ Oversized file → Should reject with clear error message
-- ✅ Invalid file type → Should reject immediately
+See [SECURITY.md](SECURITY.md) for detailed guidelines.
 
 ## 📊 Recent Updates
 
-### Version 4.0 (November 2025) 🎨 **Major UI/UX Redesign**
+### Version 5.1 (November 2025) 🎨 **Vite Migration & Polish**
 
-**Complete Visual Overhaul**
-- 🎨 **Futuristic Dark Theme** - Stunning purple/pink gradient color scheme
-- ✨ **Particle Effects** - Animated background with particle.js integration
-- 💎 **Enhanced Glassmorphism** - Darker glass effects with neon borders
-- 🌈 **Holographic Text** - White-to-cyan gradient for maximum visibility
-- 🎯 **3D Card Effects** - Depth and hover animations throughout
-- 🔮 **Neon Glow** - Subtle glow effects on key elements
-- 📱 **Mobile-First Redesign** - Optimized layouts and touch interactions
+**Architecture Upgrade**
+- ⚡ **Vite Build System** - Lightning-fast dev & builds
+- 🎨 **Tailwind CSS 4** - Latest with @tailwindcss/vite plugin
+- 📦 **ES Modules** - Clean, modular JavaScript architecture
+- 🔄 **Hot Module Replacement** - Instant dev updates
 
-**Improved User Flow**
-- 📸 **Better Image Positioning** - Poster appears above form on mobile for easy reference
-- 🕐 **Fixed DateTime Inputs** - No more overflow on mobile screens
-- 🎨 **Themed Success Page** - Calendar opened page matches dark design
-- 🔗 **GitHub Integration** - Direct link to repository in footer
-- ⬆️ **Smart Scrolling** - Auto-scroll to top when navigating back
-- 🎯 **Centered Layouts** - All form elements properly aligned
+**UI/UX Improvements**
+- 🎭 **Smoother Animations** - Slowed down, less distracting
+- 🔍 **Image Lightbox** - Click poster to enlarge
+- 🏠 **Clickable Logo** - Return to home from any screen
+- ✨ **Enhanced Batch Processing** - Edit button hover effects
+- 📦 **Better Batch UI** - Same spinner style as single processing
 
-**UI Refinements**
-- 🎨 **Dark Confidence Indicators** - Yellow/red badges with dark backgrounds for readability
-- 📅 **Inverted Calendar Icons** - White datetime picker icons for visibility
-- 🌑 **Dark Mode Only** - Removed toggle for consistent experience
-- 💜 **Unified Theme** - Calendar modal matches main site design
-- 📝 **Visible Text Gradients** - All text uses high-contrast holographic effects
+**Bug Fixes**
+- 🔧 **Animation Override** - Works despite reduced-motion preference
+- 🔧 **Button Hover States** - All buttons fill properly
+- 🔧 **Edit Modal** - Fully functional save & add to calendar
 
-**Technical Improvements**
-- ⚡ **Proper DOM Loading** - Fixed click handlers with window.onload
-- 🔧 **Removed Capture Attribute** - Mobile users can choose upload method
-- 📱 **Responsive Grid** - DateTime inputs stack on mobile, side-by-side on desktop
-- 🎨 **CSS Optimizations** - Improved glass effects and animations
+### Version 5.0 (November 2025) 📦 **Batch Processing**
 
-### Version 3.1 (October 31, 2025) 🎃
+- 📦 **Batch Upload** - Process multiple posters at once
+- ✏️ **Batch Edit** - Review and edit each extracted event
+- 📅 **Add All** - One-click add all events to calendar
+- 🎨 **Progress UI** - Visual feedback during batch processing
 
-**UX Improvements & Polish**
-- 💾 **Calendar Preference Memory** - Remembers your last calendar choice
-- 🔁 **Smart Error Recovery** - Retry button preserves image and reprocesses
-- 📳 **Haptic Feedback** - Vibration patterns for success, error, warning actions
-- 🎯 **Field Confidence Breakdown** - Visual badges on uncertain fields
-- 📸 **Enhanced Camera Support** - Direct camera access on mobile devices
-- ⚡ **Improved User Flow** - Smoother experience with preserved context
+### Previous Versions
+- **v4.0** - Futuristic dark theme, particle effects
+- **v3.1** - Calendar memory, error recovery, haptics
+- **v3.0** - Multi-calendar support, removed OAuth
+- **v2.0** - Gemini 2.0 Flash, enhanced extraction
 
-**Backend Enhancements**
-- 📊 **Per-field Confidence** - AI now rates each field individually (title, date, time, location, description)
-- 🎨 **Visual Indicators** - Yellow "Verify" and red "Check!" badges for low confidence fields
-- 🔍 **Better Accuracy** - More granular feedback helps users focus on uncertain extractions
+## 💰 Cost Estimates
 
-### Version 3.0 (October 31, 2025)
+Based on Gemini 2.5 Flash pricing:
+- **100 images/month**: ~$0.02 (essentially free)
+- **1,000 images/month**: ~$0.20
+- **10,000 images/month**: ~$2.00
 
-**Major Architecture Change: Calendar Integration**
-- 🚀 **Removed OAuth requirement** - No verification needed!
-- 📅 **Multi-calendar support** - Google, Apple, Outlook, Yahoo
-- 🎨 **Beautiful modal UI** - Smooth animations and provider selection
-- ✅ **Production ready** - Works for unlimited users immediately
-- 🔗 **Industry standard** - Uses calendar links like Eventbrite, Meetup
-
-**Auto-Update System**
-- 🔄 **Smart caching** - Proper cache control headers
-- ⚡ **Instant updates** - No manual cache clearing needed
-- � **Update notifications** - Users notified of new versions
-- 🌐 **Network-first** - Always tries to fetch fresh content
-- � **Versioned caching** - Automatic old cache cleanup
-
-**Previous Updates (Version 2.0)**
-- 🤖 Upgraded to Gemini 2.0 Flash model
-- � Enhanced extraction: recurring events, registration, organizer info
-- 🌍 Multi-language support
-- 🎨 Glassmorphism UI with dark mode
-- 📋 Drag & drop and paste support
-- ⚠️ Confidence scoring system
+Firebase free tier covers hosting and ~2M function invocations/month.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Please:
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -309,85 +221,18 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 🎯 Technical Highlights
-
-### AI Processing
-- **Model**: Google Gemini 2.0 Flash (Experimental)
-- **Vision API**: Multimodal content analysis
-- **Context-Aware**: Understands event context, not just OCR
-- **Multi-Language**: Automatic language detection
-- **Structured Output**: Nested JSON with validation
-
-### Calendar Integration
-- **No OAuth**: Uses standard calendar URL protocols
-- **Universal**: Works on all devices and browsers
-- **ICS Generation**: Creates standard `.ics` files for Apple Calendar
-- **URL Formatting**: Google, Outlook, Yahoo pre-fill URLs
-- **Privacy**: No permission grants needed
-
-### Performance
-- **Bundle Size**: 98% smaller than Tesseract approach
-- **Processing Time**: 2-5 seconds average
-- **Compression**: Automatic image optimization
-- **Caching**: Smart cache headers for fast loads
-- **PWA**: Installable, works offline
-
-### Developer Experience
-- **Simple Setup**: One API key, no OAuth configuration
-- **Clean Code**: Well-documented, modular architecture
-- **Auto-Deploy**: Firebase CI/CD ready
-- **Error Handling**: Comprehensive error messages
-- **Monitoring**: Easy to integrate with analytics
-
 ## 📝 License
 
 This project is licensed under the MIT License.
-
-## 🙏 Acknowledgments
-
-- [Google Gemini](https://ai.google.dev/) for the AI vision API
-- [Firebase](https://firebase.google.com/) for hosting and functions
-- [Tailwind CSS](https://tailwindcss.com/) for styling
 
 ## 📞 Support
 
 - 🌐 **Live App**: [event-snap.web.app](https://event-snap.web.app)
 - 📧 **Email**: gdwu007@gmail.com
-- 🐛 **Issues**: [GitHub Issues](https://github.com/gordowuu/EventScan/issues)
-- 📖 **Documentation**: `SECURITY.md` for security guidelines
+- 🐛 **Issues**: [GitHub Issues](https://github.com/gordowuu/EventSnap/issues)
 - 🔒 **Privacy**: [Privacy Policy](https://event-snap.web.app/privacy.html)
 - 📜 **Terms**: [Terms of Service](https://event-snap.web.app/terms.html)
 
-## 🗺️ Roadmap
-
-### Completed ✅
-- ✅ Multi-calendar support (Google, Apple, Outlook)
-- ✅ Futuristic dark theme with particle effects
-- ✅ Recurring event detection with RRULE support
-- ✅ Multi-language support
-- ✅ PWA capabilities with offline support
-- ✅ Auto-update system
-- ✅ Drag & drop + paste support
-- ✅ Calendar preference persistence
-- ✅ Error recovery with retry
-- ✅ Field-level confidence indicators with dark theme
-- ✅ Mobile-optimized camera/file selection
-- ✅ Responsive layouts for all screen sizes
-- ✅ GitHub repository link in footer
-- ✅ Themed success pages
-- ✅ Smart scroll-to-top navigation
-
-### Planned 📋
-- [ ] Batch processing for multiple posters
-- [ ] Event reminder customization
-- [ ] Export to ICS with all metadata
-- [ ] Image cropping/editing before processing
-- [ ] Browser extension
-- [ ] Mobile app (React Native)
-- [ ] API for third-party integrations
-- [ ] Dark/light theme toggle (currently dark only)
-- [ ] Custom color scheme options
-
 ---
 
-**Made with ❤️ using AI and Firebase**
+**Made with ❤️ using Vite, Tailwind, and Firebase**
