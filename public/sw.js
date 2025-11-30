@@ -1,7 +1,7 @@
-// Service Worker for EventSnap PWA v5.1
+// Service Worker for EventSnap PWA v5.2
 // Auto-update capable with network-first strategy
 
-const CACHE_VERSION = 'eventsnap-v5.1.0-' + Date.now();
+const CACHE_VERSION = 'eventsnap-v5.2.0-' + Date.now();
 const CACHE_NAME = CACHE_VERSION;
 
 // Core files to cache for offline functionality
