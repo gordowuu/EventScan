@@ -32,7 +32,9 @@ import {
   addConfidenceIndicator,
   showConfidenceIndicator,
   showUpdateNotification,
-  showInstallPrompt
+  showInstallPrompt,
+  showCalendarModal,
+  populateVerificationForm
 } from './modules/ui.js';
 import { shareEvent, copyEventDetails } from './modules/share.js';
 import { downloadICS, downloadJSON, copyFormattedText, createExportDropdown } from './modules/export.js';
@@ -370,7 +372,7 @@ async function processCurrentImage() {
     // Small delay to show the completed state
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    populateVerificationForm(currentEventData);
+    populateVerificationForm(elements, currentEventData);
     showScreen('verification-screen-exp');
     showConfidenceIndicator(currentEventData.confidence);
 
@@ -379,66 +381,6 @@ async function processCurrentImage() {
     handleProcessingError(error);
     showScreen('upload-screen-exp');
   }
-}
-
-/**
- * Populate the verification form with event data
- */
-function populateVerificationForm(eventData) {
-  const fieldConfidence = eventData.field_confidence || {};
-
-  elements.titleInput.value = eventData.title || '';
-  addConfidenceIndicator(elements.titleInput, fieldConfidence.title, 'title');
-
-  elements.startTimeInput.value = eventData.start_time || '';
-  addConfidenceIndicator(elements.startTimeInput, fieldConfidence.start_time, 'start time');
-
-  elements.endTimeInput.value = eventData.end_time || '';
-  addConfidenceIndicator(elements.endTimeInput, fieldConfidence.end_time, 'end time');
-
-  elements.locationInput.value = eventData.location || '';
-  addConfidenceIndicator(elements.locationInput, fieldConfidence.location, 'location');
-
-  // Handle recurring events
-  if (eventData.recurring?.is_recurring) {
-    elements.recurringSection.classList.remove('hidden');
-    elements.isRecurringCheckbox.checked = true;
-    elements.recurringOptions.classList.remove('hidden');
-    elements.recurringFrequency.value = eventData.recurring.frequency?.toLowerCase() || 'weekly';
-    elements.recurringPattern.value = eventData.recurring.pattern || '';
-  } else {
-    elements.recurringSection.classList.add('hidden');
-    elements.isRecurringCheckbox.checked = false;
-    elements.recurringOptions.classList.add('hidden');
-  }
-
-  // Build description with metadata and emojis
-  let description = eventData.description || '';
-
-  // Add registration info with emojis
-  if (eventData.registration?.url) {
-    description += `\n\n🎟️ Registration: ${eventData.registration.url}`;
-  }
-  if (eventData.registration?.price) {
-    description += `\n💰 Price: ${eventData.registration.price}`;
-  }
-  if (eventData.registration?.deadline) {
-    description += `\n⏰ Register by: ${eventData.registration.deadline}`;
-  }
-
-  // Add organizer info with emojis
-  if (eventData.organizer?.name) {
-    description += `\n\n👤 Organizer: ${eventData.organizer.name}`;
-  }
-  if (eventData.organizer?.contact) {
-    description += `\n📧 Contact: ${eventData.organizer.contact}`;
-  }
-  if (eventData.organizer?.website) {
-    description += `\n🌐 Website: ${eventData.organizer.website}`;
-  }
-
-  elements.descriptionInput.value = description.trim();
-  addConfidenceIndicator(elements.descriptionInput, fieldConfidence.description, 'description');
 }
 
 /**
@@ -481,8 +423,6 @@ function showCalendarOptionsForEvent(eventDetails) {
     return;
   }
 
-  const lastProvider = localStorage.getItem('preferredCalendar') || 'google';
-
   const providers = [
     { id: 'google', name: 'Google Calendar', color: 'from-blue-500 to-blue-600', action: () => { openGoogleCalendar(eventDetails); showSuccess('Opening Google Calendar...'); }},
     { id: 'apple', name: 'Apple Calendar', color: 'from-gray-600 to-gray-700', action: () => { openAppleCalendar(eventDetails); showSuccess('Calendar file downloaded!'); }},
@@ -490,70 +430,7 @@ function showCalendarOptionsForEvent(eventDetails) {
     { id: 'yahoo', name: 'Yahoo Calendar', color: 'from-purple-600 to-purple-700', action: () => { openYahooCalendar(eventDetails); showSuccess('Opening Yahoo Calendar...'); }}
   ];
 
-  // Create modal
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in';
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
-  modal.innerHTML = `
-    <div class="glass rounded-3xl shadow-2xl max-w-md w-full p-8 animate-scale-in border-2 border-purple-500/30">
-      <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl mb-4">
-          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-          </svg>
-        </div>
-        <h3 class="text-2xl font-bold text-white mb-2 neon-glow">Add to Calendar</h3>
-        <p class="text-sm text-purple-200">Choose your preferred calendar app</p>
-      </div>
-
-      <div class="space-y-3" id="calendar-providers"></div>
-
-      <div class="flex gap-2 mt-6">
-        <button id="share-event-btn" class="flex-1 glass py-3 px-4 rounded-xl font-semibold text-purple-200 hover:text-white transition-colors flex items-center justify-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
-          </svg>
-          Share
-        </button>
-        <button class="flex-1 glass py-3 px-4 rounded-xl font-semibold text-purple-200 hover:text-white transition-colors" onclick="this.closest('.fixed').remove()">
-          Cancel
-        </button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  // Add provider buttons
-  const providersContainer = modal.querySelector('#calendar-providers');
-  providers.forEach(provider => {
-    const isPreferred = provider.id === lastProvider;
-    const btn = document.createElement('button');
-    btn.className = `calendar-provider-btn relative overflow-hidden w-full flex items-center gap-4 p-4 rounded-xl border-2 ${isPreferred ? 'border-purple-400 bg-purple-500/20' : 'border-purple-500/30'} hover:border-purple-400 transition-all duration-200 group`;
-    btn.innerHTML = `
-      <div class="relative flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${provider.color} flex items-center justify-center text-white font-bold">${provider.name[0]}</div>
-      <div class="relative flex-1 text-left">
-        <p class="font-semibold text-purple-100 group-hover:text-white">${provider.name}</p>
-        ${isPreferred ? '<p class="text-xs text-purple-300">Your preferred choice</p>' : ''}
-      </div>
-      <svg class="w-5 h-5 text-purple-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-      </svg>
-    `;
-    btn.onclick = () => {
-      localStorage.setItem('preferredCalendar', provider.id);
-      provider.action();
-      modal.remove();
-    };
-    providersContainer.appendChild(btn);
-  });
-
-  // Share button
-  modal.querySelector('#share-event-btn').onclick = () => {
-    shareEvent(eventDetails);
-    modal.remove();
-  };
+  showCalendarModal(eventDetails, providers, () => shareEvent(eventDetails));
 }
 
 /**
